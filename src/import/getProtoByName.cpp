@@ -21,7 +21,6 @@
 
 */
 
-#include "../../config.h"
 
 #include "getProtoByName.h"
 
@@ -117,9 +116,9 @@ int GetProtoByName::getProtocolByName(const QString &name)
     if (ok) return protocol;
 
     if (protocols.contains(name)) return protocols[name];
+    struct protoent *pe = getprotobyname(name.toLatin1().constData());
 
-    struct protoent *pe = getprotobyname(name.toAscii().constData());
-    if (pe!=NULL)
+    if (pe!=nullptr)
         return pe->p_proto;
 
     return -1;

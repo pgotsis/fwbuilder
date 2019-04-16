@@ -23,7 +23,6 @@
 
 */
 
-#include "../../config.h"
 
 #include <fstream>
 #include <iostream>
@@ -58,9 +57,9 @@ using namespace libfwbuilder;
 using namespace fwcompiler;
 
 #ifdef _WIN32
-string fs_separator = "\\";
+static string fs_separator = "\\";
 #else
-string fs_separator = "/";
+static string fs_separator = "/";
 #endif
 
 
@@ -109,24 +108,24 @@ string CompilerDriver_iosacl::safetyNetInstall(Firewall *fw)
             QString err = QObject::tr("Missing address for management host or subnet "
                                       "for the temporary ACL.\nPlease enter it in the "
                                       "tab 'Script options' in 'Firewall Settings' dialog");
-            abort(fw, NULL, NULL, err.toStdString());
+            abort(fw, nullptr, nullptr, err.toStdString());
         }
 
         // if templ_acl_addr is ipv4 address, then we can not create this
         // temporary ACL while compiling ipv6 policy. And vice versa.
 
         bool create_temp_acl = false;
-        bool tmp_acl_ipv6 = false;
+        //bool tmp_acl_ipv6 = false; //UNUSED
         if (temp_acl_addr.find(":")!=string::npos)
         {
             //looks like ipv6
             create_temp_acl = true;
-            tmp_acl_ipv6 = true;
+            //tmp_acl_ipv6 = true;
         } else
         {
             // not ipv6, assume ipv4
             create_temp_acl = true;
-            tmp_acl_ipv6 = false;
+            //tmp_acl_ipv6 = false;
         }
 
         if (create_temp_acl)
@@ -167,7 +166,7 @@ string CompilerDriver_iosacl::safetyNetInstall(Firewall *fw)
                     {
                         QString err = QObject::tr("Invalid netmask for management subnet: "
                                                   "'%1'").arg(netmask.c_str());
-                        abort(fw, NULL, NULL, err.toStdString());
+                        abort(fw, nullptr, nullptr, err.toStdString());
                     }
                 }
 
@@ -179,7 +178,7 @@ string CompilerDriver_iosacl::safetyNetInstall(Firewall *fw)
                 {
                     QString err = QObject::tr("Invalid address for management subnet: "
                                               "'%1'").arg(addr.c_str());
-                    abort(fw, NULL, NULL, err.toStdString());
+                    abort(fw, nullptr, nullptr, err.toStdString());
                 }
             }
 

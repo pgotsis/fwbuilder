@@ -21,7 +21,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 
@@ -43,7 +42,7 @@
 #include <string>
 
 #include <QtDebug>
-#include <QtGui>
+#include <QtWidgets>
 #include<QStringList>
 
 
@@ -210,10 +209,9 @@ void RuleSetViewDelegate::paintRule(QPainter *painter,
     QVariant v = index.data(Qt::DisplayRole);
     if (!v.isValid()) return;
 
-    if (node != 0)
+    if (node != nullptr)
     {
-        FWOptions *ropt = node->rule->getOptionsObject();
-        QString color = ropt->getStr("color").c_str();
+        QString color = getRuleColor(node);
         if (!color.isEmpty())
         {
             painter->fillRect(option.rect, QColor(color));
@@ -312,6 +310,8 @@ void RuleSetViewDelegate::paintOptions(
         if (icon.contains("Log")) parameter = tr("log");
         if (icon.contains("Options")) parameter = tr("(options)");
 
+        if (icon.contains("Accounting")) parameter = tr("(counter)");
+
         drawIconAndText(painter,
                         itemRect.adjusted(
                             HORIZONTAL_MARGIN, VERTICAL_MARGIN,
@@ -352,7 +352,7 @@ void RuleSetViewDelegate::paintObject(
     //if (fwbdebug) qDebug() << "RuleSetViewDelegate::paintObject";
     RuleElement *re = (RuleElement *)v.value<void *>();
 
-    if (re==NULL) return;
+    if (re==nullptr) return;
 
     DrawingContext ctx = initContext(option.rect, true);
 
@@ -361,7 +361,7 @@ void RuleSetViewDelegate::paintObject(
     for (FWObject::iterator i=re->begin(); i!=re->end(); i++)
     {
         FWObject *o1 = FWReference::getObject(*i);
-        if (o1==NULL) continue ;
+        if (o1==nullptr) continue ;
 
         QRect itemRect = QRect(ctx.objectRect.left(), y, ctx.objectRect.width(), ctx.itemHeight);
 
@@ -375,14 +375,16 @@ void RuleSetViewDelegate::paintObject(
         }
 
         QString icon;
-        if (!re->isAny()) icon = QString(o1->getTypeName().c_str()); // + "/icon";
+        if (!re->isAny() && !re->isDummy()) icon = QString(o1->getTypeName().c_str()); // + "/icon";
         QString text = objectText(re, o1);
+
+        if (re->isDummy()) painter->setPen( QColor("darkred") );
 
         drawIconAndText(painter,
                         itemRect.adjusted(HORIZONTAL_MARGIN, VERTICAL_MARGIN, -HORIZONTAL_MARGIN, -VERTICAL_MARGIN),
                         icon, text, re->getNeg());
 
-        if ((sectionModel->selectedObject == o1) && !(option.state & QStyle::State_HasFocus) && !re->isAny())
+        if ((sectionModel->selectedObject == o1) && !(option.state & QStyle::State_HasFocus) && !re->isAny() && !re->isDummy())
         {
             painter->setPen( QColor("red") );
             painter->drawRect(itemRect.left()+1, itemRect.top()+1, itemRect.width()-2, itemRect.height()-2);
@@ -473,7 +475,7 @@ QSize RuleSetViewDelegate::sizeHint(const QStyleOptionViewItem & option,
         // make sure cell height is equal to max height of all cells
         // in the same row. See #2665
         QSize tallest_cell = QSize(0, 0);
-        for (unsigned int c=0; c<=index.column(); ++c)
+        for (int c=0; c<=index.column(); ++c)
         {
             QSize cell_size = node->sizes[c];
             if (cell_size.isValid())
@@ -526,6 +528,7 @@ QSize RuleSetViewDelegate::calculateCellSizeForRule(
     Q_UNUSED(node);
 
     QSize iconSize = getIconSize();
+    Q_UNUSED(iconSize);
     int itemHeight = getItemHeight();
 
     QSize result = QSize(50,itemHeight);
@@ -575,7 +578,7 @@ QSize RuleSetViewDelegate::calculateCellSizeForComment(const QModelIndex & index
 QSize RuleSetViewDelegate::calculateCellSizeForObject(const QModelIndex & index) const
 {
     RuleElement *re = (RuleElement *)index.data(Qt::DisplayRole).value<void *>();
-    if (re == 0) return QSize(0,0);
+    if (re == nullptr) return QSize(0,0);
 
     int itemHeight = getItemHeight();
     QSize iconSize = getIconSize();
@@ -588,12 +591,12 @@ QSize RuleSetViewDelegate::calculateCellSizeForObject(const QModelIndex & index)
         FWObject *o1= *j;
         FWObject *o2 = o1;
         string o1ref = "";
-        if (FWReference::cast(o1)!=NULL)
+        if (FWReference::cast(o1)!=nullptr)
         {
             o1ref = FWReference::cast(o1)->getPointerId();
             o2=FWReference::cast(o1)->getPointer();
         }
-        if (o2!=NULL)
+        if (o2!=nullptr)
         {
             QString ot = objectText(re,o2);
 
@@ -604,7 +607,7 @@ QSize RuleSetViewDelegate::calculateCellSizeForObject(const QModelIndex & index)
         }
     }
     QSize res = QSize(w+HORIZONTAL_MARGIN*2,h);
-    QModelIndex idx = index;
+    // QModelIndex idx = index; // Unused
     return res;
 }
 
@@ -711,4 +714,10 @@ DrawingContext RuleSetViewDelegate::initContext(
                                 -HORIZONTAL_MARGIN, -VERTICAL_MARGIN);
 
     return ctx;
+}
+
+QString RuleSetViewDelegate::getRuleColor(RuleNode *node) const
+{
+    FWOptions *ropt = node->rule->getOptionsObject();
+    return QString(ropt->getStr("color").c_str());
 }

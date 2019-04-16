@@ -25,12 +25,11 @@
 
 #include "parseCommandLineTest.h"
 
-#include "config.h"
 #include "utils.h"
 
-#include <qapplication.h>
-#include <qfile.h>
-#include <qtextstream.h>
+#include <QApplication>
+#include <QFile>
+#include <QTextStream>
 
 #include <iostream>
 

@@ -23,7 +23,6 @@
 
 #include "PFImporterTest.h"
 
-#include "config.h"
 #include "global.h"
 
 #include <fstream>
@@ -115,7 +114,7 @@ void PFImporterTest::compareResults(QueueLogger* logger,
 
     QFile rw(obtained_result_file_name);
     rw.open(QFile::WriteOnly);
-    rw.write(result.toAscii());
+    rw.write(result.toLatin1());
     rw.close();
 
     QFile rr(expected_result_file_name);

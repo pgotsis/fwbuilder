@@ -14,7 +14,6 @@
  * o The terms of NetCitadel End User License Agreement
  */
 
-#include "../../config.h"
 
 #include "generatedScriptTestsSecuwall.h"
 
@@ -37,7 +36,6 @@ int main(int argc, char **argv)
     QApplication app(argc, argv, false);
 
     // compilers always write file names into manifest in Utf8
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("Utf8"));
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("Utf8"));
 
     init(argv);

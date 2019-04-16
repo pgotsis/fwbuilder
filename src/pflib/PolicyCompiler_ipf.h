@@ -26,7 +26,6 @@
 #ifndef __POLICYCOMPILER_IPF_HH
 #define __POLICYCOMPILER_IPF_HH
 
-#include <fwbuilder/libfwbuilder-config.h>
 #include "PolicyCompiler_pf.h"
 
 
@@ -253,7 +252,7 @@ namespace fwcompiler {
 			   libfwbuilder::Firewall *fw,
                            bool ipv6_policy,
 			   fwcompiler::OSConfigurator *_oscnf) :
-        PolicyCompiler_pf(_db, fw, ipv6_policy, _oscnf, NULL) {}
+        PolicyCompiler_pf(_db, fw, ipv6_policy, _oscnf, nullptr) {}
 
 
 	virtual int  prolog();

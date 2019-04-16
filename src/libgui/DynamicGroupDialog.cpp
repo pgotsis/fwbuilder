@@ -48,6 +48,8 @@ QWidget *DynamicItemDelegate::createEditor(QWidget *parent,
                                            const QStyleOptionViewItem &option,
                                            const QModelIndex &index) const
 {
+    Q_UNUSED(option)
+
     if (index.column() == 0) {
         QToolButton *button = new QToolButton(parent);
         QPixmap pixmap;
@@ -71,6 +73,8 @@ QWidget *DynamicItemDelegate::createEditor(QWidget *parent,
 
 void DynamicItemDelegate::comboActivated(int abc)
 {
+    Q_UNUSED(abc)
+
     /* Don't wait until we lose focus on the combobox */
     emit commitData(dynamic_cast<QWidget *>(sender()));
 }
@@ -244,10 +248,8 @@ void DynamicGroupDialog::loadObjFilter()
        ResizeToContents doesn't always seem to work */
     header->resizeSection(0, 35);
     header->setStretchLastSection(true);
-
-    header->setResizeMode(0, QHeaderView::ResizeToContents);
-    header->setResizeMode(1, QHeaderView::ResizeToContents);
-
+    header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     m_reloadObjFilter = false;
     m_loadedObjFilter = filter;
     m_loadedAllKeywords = obj->getAllKeywords();
@@ -302,6 +304,7 @@ void DynamicGroupDialog::loadFWObject(FWObject *o)
 
 void DynamicGroupDialog::validate(bool *result)
 {
+    Q_UNUSED(result)
 }
 
 
@@ -346,7 +349,7 @@ void DynamicGroupDialog::gotItemDoubleClicked(QTreeWidgetItem *item, int)
 {
     int objId = item->data(0, Qt::UserRole).toInt();
     FWObject *o = m_project->db()->findInIndex(objId);
-    if (o == 0) return;
+    if (o == nullptr) return;
 
     QCoreApplication::postEvent(m_project, new showObjectInTreeEvent(o->getRoot()->getFileName().c_str(), objId));
     QCoreApplication::postEvent(mw, new openObjectInEditorEvent(o->getRoot()->getFileName().c_str(), objId));

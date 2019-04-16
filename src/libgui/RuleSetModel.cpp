@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "definitions.h"
 #include "global.h"
 #include "utils.h"
@@ -182,7 +181,7 @@ void RuleSetModel::initModel()
     {
 
         Rule *r = Rule::cast( *i );
-        if (r == NULL) continue;  // skip RuleSetOptions
+        if (r == nullptr) continue;  // skip RuleSetOptions
 
 //        rulesByPosition[r->getPosition()] = r;
 
@@ -424,7 +423,7 @@ QModelIndex RuleSetModel::index(Rule *rule, int col) const
     }
     RuleNode *parentNode = nodeFromIndex(parent);
     int row = 0;
-    RuleNode* child = NULL;
+    RuleNode* child = nullptr;
     foreach(RuleNode *node, parentNode->children)
     {
         if (node->type == RuleNode::Rule && node->rule == rule)
@@ -434,7 +433,7 @@ QModelIndex RuleSetModel::index(Rule *rule, int col) const
         }
         row++;
     }
-    if (child == NULL) return QModelIndex();
+    if (child == nullptr) return QModelIndex();
     return createIndex(row, col, child);
 }
 
@@ -506,8 +505,8 @@ bool RuleSetModel::isEmpty()
 Firewall* RuleSetModel::getFirewall() const
 {
     FWObject *f=ruleset;
-    while (f!=NULL && (!Firewall::isA(f) && !Cluster::isA(f))) f=f->getParent();
-    // f can be NULL if user is looking at deleted ruleset which is a child
+    while (f!=nullptr && (!Firewall::isA(f) && !Cluster::isA(f))) f=f->getParent();
+    // f can be nullptr if user is looking at deleted ruleset which is a child
     // of the library DeletedObjects
     return Firewall::cast(f);
 }
@@ -590,7 +589,7 @@ Rule* RuleSetModel::insertRule(Rule *rule, QModelIndex &index, bool isAfter)
 void RuleSetModel::insertRule(Rule *rule) {
     Rule * targetRule = ruleset->getRuleByNum(rule->getPosition());
 
-    if (targetRule==NULL)
+    if (targetRule==nullptr)
     {
         ruleset->add(rule);
         if (isEmpty())
@@ -606,8 +605,34 @@ void RuleSetModel::insertRule(Rule *rule) {
     } else
     {
         QModelIndex index = this->index(targetRule);
-        ruleset->insert_before(targetRule,rule);
-        insertRuleToModel(rule, index, false);
+        /*
+         * Bugfix: when inserting a new rule abow a group, doing undo and then redo
+         * we need to check which group the rule really belongs to
+         */
+
+        if (targetRule->getStr("group") != rule->getStr("group")) {
+            // The new rule at the index we are about to re-insert
+            // are not in the same group as the old rule was
+
+            // We'll get the group name from the rule above the current index
+            targetRule = ruleset->getRuleByNum(rule->getPosition() - 1);
+            if (targetRule) {
+                index = this->index(targetRule);
+                ruleset->insert_after(targetRule,rule);
+                insertRuleToModel(rule, index, true);
+            } else {
+                // We are inserting on the top and there's no rule above
+                // the current index. Let's just insert the rule at the top then,
+                // and not put it into the group below
+                rule->setParent(ruleset);
+                ruleset->insert_before(ruleset->getRuleByNum(0), rule);
+                index = QModelIndex();
+                insertRuleToModel(rule, index);
+            }
+        } else {
+            ruleset->insert_before(targetRule,rule);
+            insertRuleToModel(rule, index, false);
+        }
     }
     ruleset->renumberRules();
 }
@@ -1074,7 +1099,7 @@ void RuleSetModel::deleteObject(QModelIndex &index, FWObject* obj)
 {
     RuleElement *re = (RuleElement *)index.data(Qt::DisplayRole).value<void *>();
 
-    if (re==NULL || re->isAny()) return;
+    if (re==nullptr || re->isAny()) return;
 //    int id = obj->getId();
 
     // if (fwbdebug)
@@ -1110,14 +1135,14 @@ bool RuleSetModel::insertObject(QModelIndex &index, FWObject *obj)
     if (colDesc.type != ColDesc::Object && colDesc.type != ColDesc::Time) return false;
 
     RuleElement *re = (RuleElement *)index.data(Qt::DisplayRole).value<void *>();
-    assert (re!=NULL);
+    assert (re!=nullptr);
 
     if (! re->validateChild(obj) )
     {
         if (RuleElementRItf::cast(re))
         {
             QMessageBox::information(
-                NULL , "Firewall Builder",
+                nullptr , "Firewall Builder",
                 QObject::tr(
                     "A single interface belonging to "
                     "this firewall is expected in this field."),
@@ -1126,7 +1151,7 @@ bool RuleSetModel::insertObject(QModelIndex &index, FWObject *obj)
         else if (RuleElementRGtw::cast(re))
         {
             QMessageBox::information(
-                NULL , "Firewall Builder",
+                nullptr , "Firewall Builder",
                 QObject::tr(
                     "A single ip address is expected "
                     "here. You may also insert a host "
@@ -1150,7 +1175,7 @@ bool RuleSetModel::insertObject(QModelIndex &index, FWObject *obj)
             if(cp_id==o->getId()) return false;
 
             FWReference *ref;
-            if( (ref=FWReference::cast(o))!=NULL &&
+            if( (ref=FWReference::cast(o))!=nullptr &&
                  cp_id==ref->getPointerId()) return false;
         }
     }
@@ -1198,7 +1223,7 @@ bool RuleSetModel::isGroup(const QModelIndex &index) const
 {
     RuleNode* node = nodeFromIndex(index);
 
-    return node != NULL && node->type == RuleNode::Group;
+    return node != nullptr && node->type == RuleNode::Group;
 }
 
 void RuleSetModel::resetAllSizes()
@@ -1245,6 +1270,7 @@ int RuleSetModel::getRulePosition(QModelIndex index)
 
 void RuleSetModel::objectChanged(FWObject* object)
 {
+    Q_UNUSED(object)
 /*
  * See #2373
  *
@@ -1304,9 +1330,9 @@ QModelIndexList RuleSetModel::findObject(FWObject* object)
                 for (FWObject::iterator i=re->begin(); i!=re->end(); i++)
                 {
                     FWObject *obj= *i;
-                    if (FWReference::cast(obj)!=NULL)
+                    if (FWReference::cast(obj)!=nullptr)
                         obj=FWReference::cast(obj)->getPointer();
-                    if (obj==NULL)
+                    if (obj==nullptr)
                         continue ;
                     if (object == obj)
                     {
@@ -1345,7 +1371,7 @@ QModelIndexList RuleSetModel::findObject(FWObject* object)
 
 void RuleSetModel::copyRuleWithoutId(Rule* fromRule, Rule* toRule)
 {
-    if (fromRule!=NULL && toRule!=NULL)
+    if (fromRule!=nullptr && toRule!=nullptr)
     {
         int oldPos = toRule->getPosition();
         toRule->duplicate(fromRule);
@@ -1447,6 +1473,9 @@ QStringList PolicyModel::getRuleOptions(Rule* r) const
 
     if (policyRule->getLogging()) res << "Log";
 
+    if (!policyRule->getOptionsObject()->getStr("counter_name").empty())
+        res << "Accounting";
+
     if ( ! isDefaultPolicyRuleOptions(r->getOptionsObject())) res << "Options";
 
     FWObject *firewall = r;
@@ -1531,6 +1560,18 @@ void PolicyModel::initRule(Rule *new_rule, Rule *old_rule)
         case 2:
             newrule_as_policy_rule->setDirection(PolicyRule::Outbound); break;
         }
+
+        if (st->getInt("Objects/PolicyRule/defaultSource"))
+            newrule_as_policy_rule->setDummySource();
+
+        if (st->getInt("Objects/PolicyRule/defaultDestination"))
+            newrule_as_policy_rule->setDummyDestination();
+
+        if (st->getInt("Objects/PolicyRule/defaultService"))
+            newrule_as_policy_rule->setDummyService();
+
+        if (st->getInt("Objects/PolicyRule/defaultInterface"))
+            newrule_as_policy_rule->setDummyInterface();
 
         ruleopt->setBool("stateless",
                          ! st->getBool("Objects/PolicyRule/defaultStateful") ||

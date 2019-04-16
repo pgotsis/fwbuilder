@@ -27,10 +27,8 @@
 #ifndef __HELP_H_
 #define __HELP_H_
 
-#include "config.h"
 #include "ui_helpview_q.h"
 
-#include "HttpGet.h"
 #include "global.h"
 #include "FWWindow.h"
 
@@ -48,18 +46,16 @@ class Help : public QDialog
     QStringList paths;
     QByteArray window_geometry;
     Qt::WindowFlags flags;
-    bool load_links_in_browser;
-    HttpGet *http_getter;
-    bool delayed_open;
 
 public:
     Ui::HelpView_q *m_dialog;
 
-    Help(QWidget *parent, const QString &title, bool load_links_in_browser=true);
+    Help(QWidget *parent, const QString &title);
     virtual ~Help();
 
     void setSource(const QUrl &url);
     QString findHelpFile(const QString &file_base_name);
+    void showAllReleaseNotes(const QString &path);
 
     void setName(const QString &name);
 
@@ -71,8 +67,8 @@ public:
     static Help* help_window;
 
 public slots:
-    void downloadComplete(const QString&);
     void show();
+    void showReleaseNotesSelected();
 
 };
 

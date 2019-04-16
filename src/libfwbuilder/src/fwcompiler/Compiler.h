@@ -26,8 +26,6 @@
 #ifndef __COMPILER_HH__
 #define __COMPILER_HH__
 
-#include "config.h"
-#include "fwbuilder/libfwbuilder-config.h"
 #include "fwbuilder/FWObjectDatabase.h"
 #include "fwbuilder/FWException.h"
 
@@ -427,7 +425,7 @@ public:
             protected:
             libfwbuilder::FWObject *obj;
             public:
-            equalObj(){obj=NULL;}
+            equalObj(){obj=nullptr;}
             virtual ~equalObj() {}
             void set(libfwbuilder::FWObject *o) {obj=o;}
             virtual bool operator()(libfwbuilder::FWObject *o);
@@ -440,8 +438,8 @@ public:
             equalObj *comparator;
             public:
             eliminateDuplicatesInRE(const std::string &n,const std::string _type):
-                BasicRuleProcessor(n) { re_type=_type; comparator=NULL; }
-            ~eliminateDuplicatesInRE() { if (comparator!=NULL) delete comparator; }
+                BasicRuleProcessor(n) { re_type=_type; comparator=nullptr; }
+            ~eliminateDuplicatesInRE() { if (comparator!=nullptr) delete comparator; }
             virtual bool processNext();
         };
 
@@ -1001,15 +999,16 @@ public:
 	Compiler(libfwbuilder::FWObjectDatabase *_db,
 		 libfwbuilder::Firewall *fw, bool ipv6_policy,
 		 fwcompiler::OSConfigurator *_oscnf);
-
+/*
+ * TODO: Refactor Compiler to not hide BaseCompiler
+ */
 	Compiler(libfwbuilder::FWObjectDatabase *_db, bool ipv6_policy);
 
         /**
          * overloaded methods: uses current firewall and ruleset objects
          */
-        virtual void abort(const std::string &errstr) throw(libfwbuilder::FWException);
-        virtual void abort(libfwbuilder::FWObject *rule, const std::string &errstr)
-            throw(libfwbuilder::FWException);
+        virtual void abort(const std::string &errstr);
+        virtual void abort(libfwbuilder::FWObject *rule, const std::string &errstr);
 
         virtual void error(const std::string &errstr);
         virtual void error(libfwbuilder::FWObject *rule, const std::string &errstr);

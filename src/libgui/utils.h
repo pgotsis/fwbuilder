@@ -31,7 +31,9 @@
 #include <string>
 #include <list>
 #include <functional>
-#include <QMenu>
+
+#include <qglobal.h>
+#include <QtWidgets/QMenu>
 
 class QObject;
 class QWidget;

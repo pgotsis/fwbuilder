@@ -23,7 +23,6 @@
 
 */
 
-#include "../../config.h"
  
 #ifdef HAVE_LOCALE_H
 #include <locale.h>
@@ -62,7 +61,7 @@
 #include "fwbuilder/Interface.h"
 #include "fwbuilder/Constants.h"
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QStringList>
 #include <QTextCodec>
 
@@ -74,7 +73,7 @@ using namespace fwcompiler;
 
 int fwbdebug = 0;
 
-FWObjectDatabase       *objdb = NULL;
+FWObjectDatabase       *objdb = nullptr;
 
 
 class UpgradePredicate: public XMLTools::UpgradePredicate
@@ -98,10 +97,9 @@ void usage(const char *name)
 
 int main(int argc, char **argv)
 {   
-   QApplication app(argc, argv, false);
+   QCoreApplication app(argc, argv, false);
 
     // compilers always write file names into manifest in Utf8
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("Utf8"));
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("Utf8"));
     
     QStringList args = app.arguments();
@@ -157,7 +155,7 @@ int main(int argc, char **argv)
         objdb->setFileName("");
         FWObjectDatabase *ndb = new FWObjectDatabase();
         ndb->load(filename, &upgrade_predicate,  Constants::getDTDDirectory());
-        objdb->merge(ndb, NULL);
+        objdb->merge(ndb, nullptr);
         delete ndb;
         objdb->setFileName(filename);
         objdb->reIndex();
@@ -174,7 +172,8 @@ int main(int argc, char **argv)
             exit(1);
         }
         driver->compile();
-        int ret = (driver->getStatus() == BaseCompiler::FWCOMPILER_SUCCESS) ? 0 : 1;
+        //int ret = (driver->getStatus() == BaseCompiler::FWCOMPILER_SUCCESS) ? 0 : 1;
+        int ret = driver->getStatus();
 
         delete driver;
         delete objdb;

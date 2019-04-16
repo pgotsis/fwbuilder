@@ -28,13 +28,12 @@
 #define  __OBJECTMANIPULATOR_H_
 
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 
-#include <qdialog.h>
-#include <qtreewidget.h>
-#include <qtooltip.h>
+#include <QDialog>
+#include <QTreeWidget>
+#include <QToolTip>
 #include <QMenu>
 
 #include <ui_objectmanipulator_q.h>
@@ -124,6 +123,8 @@ class ObjectManipulator : public QWidget
 
     QMenu *popup_menu;
 
+    ObjectTreeViewItem *lastClickedItem;
+
 /* this is a reverse idex of all objects in all trees. We use it to
  * quickly locate given object in the tree and open it
  */
@@ -158,7 +159,7 @@ class ObjectManipulator : public QWidget
         libfwbuilder::FWObject *parent,
         const QString &objType,
         const QString &objName,
-        libfwbuilder::FWObject *copyFrom=NULL,
+        libfwbuilder::FWObject *copyFrom=nullptr,
         QUndoCommand* macro = 0);
 
     void extractFirewallsFromGroup(libfwbuilder::ObjectGroup *gr,
@@ -235,7 +236,7 @@ public slots:
       * Internal: this method is used in actuallyPasteTo(). This
       * method checks if the target object is appropriate and replaces
       * it with parent if needed. Also does validation and shows error
-      * dialogs if validation fails. Returns new parent or NULL if
+      * dialogs if validation fails. Returns new parent or nullptr if
       * validation fails.
       */
      libfwbuilder::FWObject* prepareForInsertion(libfwbuilder::FWObject *target,
@@ -243,13 +244,13 @@ public slots:
 
      libfwbuilder::FWObject* createObject(const QString &objType,
                                           const QString &objName,
-                                          libfwbuilder::FWObject *copyFrom=NULL,
+                                          libfwbuilder::FWObject *copyFrom=nullptr,
                                           QUndoCommand* macro = 0);
 
      libfwbuilder::FWObject* createObject(libfwbuilder::FWObject *parent,
                                           const QString &objType,
                                           const QString &objName,
-                                          libfwbuilder::FWObject *copyFrom=NULL,
+                                          libfwbuilder::FWObject *copyFrom=nullptr,
                                           QUndoCommand* macro = 0);
 
      void newObject();
@@ -301,7 +302,7 @@ public:
 
      void libChangedById(int id);
 
-     libfwbuilder::FWObject* getNextUserLib(libfwbuilder::FWObject *after_this=NULL);
+     libfwbuilder::FWObject* getNextUserLib(libfwbuilder::FWObject *after_this=nullptr);
 
      std::vector<QTreeWidget*> getTreeWidgets();
 
@@ -321,6 +322,8 @@ public:
                      const std::string &objtype,
                      const std::string &namesuffix);
      void autorenameVlans(std::list<libfwbuilder::FWObject*> &obj_list);
+
+     std::string getFolderNameString(libfwbuilder::FWObject *obj);
 
      void reload();
 
@@ -488,8 +491,11 @@ public:
     
      void reminderAboutStandardLib();
      
+     void addSubfolderActions(QList<QAction*> &AddObjectActions, libfwbuilder::FWObject *currentObj, ObjectTreeViewItem *item, bool &addSubfolder);
 signals:
      void libraryAccessChanged(bool writable);
+
+
 };
 
 #endif

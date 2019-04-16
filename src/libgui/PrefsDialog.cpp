@@ -6,6 +6,11 @@
 
   Author:  Vadim Kurland     vadim@fwbuilder.org
 
+
+                 Copyright (C) 2013 UNINETT AS
+
+  Author:  Sirius Bakke <sirius.bakke@uninett.no>
+
   $Id$
 
   This program is free software which we release under the GNU General Public
@@ -24,10 +29,8 @@
 */
 
 
-#include "config.h"
 #include "global.h"
 #include "check_update_url.h"
-#include "../../VERSION.h"
 
 #include "utils.h"
 #include "platforms.h"
@@ -36,7 +39,6 @@
 #include "FWBSettings.h"
 #include "FWWindow.h"
 #include "ProjectPanel.h"
-#include "HttpGet.h"
 #include "RuleSetView.h"
 
 #include "fwbuilder/Resources.h"
@@ -98,9 +100,6 @@ void PrefsDialog::setButtonColor(QPushButton *btn,const QString &colorCode)
 
 PrefsDialog::~PrefsDialog()
 {
-    disconnect(&current_version_http_getter, SIGNAL(done(const QString&)),
-               this, SLOT(checkForUpgrade(const QString&)));
-
     delete m_dialog;
 }
 
@@ -150,11 +149,14 @@ PrefsDialog::PrefsDialog(QWidget *parent) : QDialog(parent)
 //    dontSaveStdLib->setChecked( st->getDontSaveStdLib() );
 
     m_dialog->sshPath->setText( st->getSSHPath() );
-    m_dialog->scpPath->setText( st->getSCPPath() );
+    m_dialog->scpPath->setText( st->getSCPPath() );;
     m_dialog->sshTimeout->setValue( st->getSSHTimeout() );
 
     m_dialog->rememberSshPass->setChecked(
         st->getBool("Environment/RememberSshPassEnabled") );
+
+    m_dialog->autoCompileChk->setChecked( st->getBool("/Diff/AutoCompile"));
+    m_dialog->diffPath->setText( st->getDiffPath() );
 
     m_dialog->showTips->setChecked( st->getBool("UI/NoStartTip") );
 
@@ -169,6 +171,18 @@ PrefsDialog::PrefsDialog(QWidget *parent) : QDialog(parent)
 
     m_dialog->rulesDefaultDirection->setCurrentIndex(
         st->getInt("Objects/PolicyRule/defaultDirection"));
+
+    m_dialog->rulesDefaultSource->setCurrentIndex(
+        st->getInt("Objects/PolicyRule/defaultSource"));
+
+    m_dialog->rulesDefaultDestination->setCurrentIndex(
+        st->getInt("Objects/PolicyRule/defaultDestination"));
+
+    m_dialog->rulesDefaultService->setCurrentIndex(
+        st->getInt("Objects/PolicyRule/defaultService"));
+
+    m_dialog->rulesDefaultInterface->setCurrentIndex(
+        st->getInt("Objects/PolicyRule/defaultInterface"));
 
     m_dialog->autoconfigure_interfaces->setChecked(
         st->getBool("Objects/Interface/autoconfigureInterfaces") );
@@ -244,6 +258,22 @@ PrefsDialog::PrefsDialog(QWidget *parent) : QDialog(parent)
 #if !defined(Q_OS_WIN32)
     m_dialog->plink_hint->hide();
 #endif
+
+    // Diff Viewer
+
+    colors[FWBSettings::ADD_COLOR]=st->getDiffColor(FWBSettings::ADD_COLOR);
+    setButtonColor(m_dialog->addColorBtn, colors[FWBSettings::ADD_COLOR]);
+
+    colors[FWBSettings::EDIT_COLOR]=st->getDiffColor(FWBSettings::EDIT_COLOR);
+    setButtonColor(m_dialog->editColorBtn, colors[FWBSettings::EDIT_COLOR]);
+
+    colors[FWBSettings::MOVE_COLOR]=st->getDiffColor(FWBSettings::MOVE_COLOR);
+    setButtonColor(m_dialog->moveColorBtn, colors[FWBSettings::MOVE_COLOR]);
+
+    colors[FWBSettings::REMOVE_COLOR]=st->getDiffColor(FWBSettings::REMOVE_COLOR);
+    setButtonColor(m_dialog->removeColorBtn, colors[FWBSettings::REMOVE_COLOR]);
+
+    m_dialog->displayUnmodifiedRulesChk->setChecked(st->getDisplayUnmodifiedRules());
 
     // Fill lists of platforms and host OS
 
@@ -350,6 +380,26 @@ void PrefsDialog::changeGrayColor()
     changeColor(m_dialog->grayBtn, FWBSettings::GRAY);
 }
 
+void PrefsDialog::changeAddColor()
+{
+    changeColor(m_dialog->addColorBtn, FWBSettings::ADD_COLOR);
+}
+
+void PrefsDialog::changeEditColor()
+{
+    changeColor(m_dialog->editColorBtn, FWBSettings::EDIT_COLOR);
+}
+
+void PrefsDialog::changeMoveColor()
+{
+    changeColor(m_dialog->moveColorBtn, FWBSettings::MOVE_COLOR);
+}
+
+void PrefsDialog::changeRemoveColor()
+{
+    changeColor(m_dialog->removeColorBtn, FWBSettings::REMOVE_COLOR);
+}
+
 void PrefsDialog::changeIconSize25()
 {
     //st->setIconsInRulesSize(FWBSettings::SIZE25X25);
@@ -453,6 +503,21 @@ void PrefsDialog::findSCP()
     m_dialog->scpPath->setText(fp);
 }
 
+void PrefsDialog::findDiff()
+{
+    QString diffPath = m_dialog->diffPath->text();
+    if (!QFileInfo(diffPath).isFile()) diffPath = st->getDiffPath();
+    if (!QFileInfo(diffPath).isFile()) diffPath = st->getOpenFileDir();
+
+    QString fp = QFileDialog::getOpenFileName(
+        this, tr("Find Diff utility"), diffPath);
+
+    if (fp.isEmpty()) return;
+    st->setOpenFileDir(fp);
+
+    m_dialog->diffPath->setText(fp);
+}
+
 void PrefsDialog::accept()
 {
     QString wd=m_dialog->wDir->text();
@@ -504,7 +569,17 @@ void PrefsDialog::accept()
     st->setInt("Objects/PolicyRule/defaultDirection",
                 m_dialog->rulesDefaultDirection->currentIndex());
 
+    st->setInt("Objects/PolicyRule/defaultSource",
+                m_dialog->rulesDefaultSource->currentIndex());
 
+    st->setInt("Objects/PolicyRule/defaultDestination",
+                m_dialog->rulesDefaultDestination->currentIndex());
+
+    st->setInt("Objects/PolicyRule/defaultService",
+                m_dialog->rulesDefaultService->currentIndex());
+
+    st->setInt("Objects/PolicyRule/defaultInterface",
+                m_dialog->rulesDefaultInterface->currentIndex());
 
     st->setBool("Objects/Interface/autoconfigureInterfaces",
                 m_dialog->autoconfigure_interfaces->isChecked());
@@ -559,9 +634,19 @@ void PrefsDialog::accept()
     st->setSCPPath( m_dialog->scpPath->text() );
     st->setSSHTimeout(m_dialog->sshTimeout->value());
 
+    st->setBool("/Diff/AutoCompile", m_dialog->autoCompileChk->isChecked());
+    st->setDiffPath( m_dialog->diffPath->text() );
+
     st->setBool("Environment/RememberSshPassEnabled", m_dialog->rememberSshPass->isChecked());
     
     st->setCheckUpdates(m_dialog->checkUpdates->isChecked());
+
+    st->setDiffColor(FWBSettings::ADD_COLOR,    colors[FWBSettings::ADD_COLOR]);
+    st->setDiffColor(FWBSettings::EDIT_COLOR,   colors[FWBSettings::EDIT_COLOR]);
+    st->setDiffColor(FWBSettings::MOVE_COLOR,   colors[FWBSettings::MOVE_COLOR]);
+    st->setDiffColor(FWBSettings::REMOVE_COLOR, colors[FWBSettings::REMOVE_COLOR]);
+
+    st->setDisplayUnmodifiedRules( m_dialog->displayUnmodifiedRulesChk->isChecked() );
 
     for (int row=0; row < m_dialog->enabled_platforms->rowCount(); ++row)
     {
@@ -603,52 +688,19 @@ void PrefsDialog::accept()
     QDialog::accept();
 }
 
-void PrefsDialog::checkSwUpdates()
-{
-    st->setCheckUpdatesProxy(m_dialog->checkUpdatesProxy->text());
-
-    connect(&current_version_http_getter, SIGNAL(done(const QString&)),
-            this, SLOT(checkForUpgrade(const QString&)));
-    QString url = QString(CHECK_UPDATE_URL).arg(VERSION).arg(st->getAppGUID());
-    current_version_http_getter.get(QUrl(url));
-}
-
-void PrefsDialog::checkForUpgrade(const QString& server_response)
-{
-    disconnect(&current_version_http_getter, SIGNAL(done(const QString&)),
-               this, SLOT(checkForUpgrade(const QString&)));
-
-    if (current_version_http_getter.getStatus())
-    {
-        /*
-         * server response may be some html or other data in case
-         * connection goes via proxy, esp. with captive portals. We
-         * should not interpret that as "new version is available"
-         */
-        if (server_response.trimmed() == "update = 1")
-        {
-            QMessageBox::warning(
-                this,"Firewall Builder",
-                tr("A new version of Firewall Builder is available at"
-                   " http://www.fwbuilder.org"));
-        } else
-        {
-            QMessageBox::information(
-                this,"Firewall Builder",
-                tr("Your version of Firewall Builder is up to date."));
-        }
-    } else
-    {
-        QMessageBox::critical(
-            this,"Firewall Builder",
-            tr("Error checking for software updates:\n%1").
-            arg(current_version_http_getter.getLastError()));
-    }
-}
-
 void PrefsDialog::objTooltipsEnabled(bool enabled)
 {
     if (!enabled && m_dialog->advTooltipMode->isChecked())
         m_dialog->advTooltipMode->setChecked(false);
     m_dialog->advTooltipMode->setEnabled(enabled);
+}
+
+void PrefsDialog::selectTab(const QString &name)
+{
+    for (int i = m_dialog->tabWidget->count(); i >= 0; i--) {
+        if (m_dialog->tabWidget->tabText(i) == name) {
+            m_dialog->tabWidget->setCurrentIndex(i);
+            return;
+        }
+    }
 }

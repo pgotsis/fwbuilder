@@ -136,8 +136,15 @@ string PolicyCompiler_ipt::PrintRule::_createChain(const string &chain)
 
     if ( ipt_comp->minus_n_commands->count(chain)==0 )
     {
-	res = string((ipt_comp->ipv6) ? "$IP6TABLES -N " : "$IPTABLES -N ") +
-            chain;
+        string opt_wait;
+
+        if (XMLTools::version_compare(version, "1.4.20")>=0)
+            opt_wait = "-w ";
+        else
+            opt_wait = "";
+
+	res = string((ipt_comp->ipv6) ? "$IP6TABLES " : "$IPTABLES ") +
+            opt_wait + "-N " + chain;
         if (ipt_comp->my_table != "filter") res += " -t " + ipt_comp->my_table;
         res += "\n";
 	(*(ipt_comp->minus_n_commands))[chain] = true;
@@ -149,6 +156,14 @@ string PolicyCompiler_ipt::PrintRule::_startRuleLine()
 {            
     PolicyCompiler_ipt *ipt_comp = dynamic_cast<PolicyCompiler_ipt*>(compiler);
     string res = (ipt_comp->ipv6) ? "$IP6TABLES " : "$IPTABLES ";
+    string opt_wait;
+
+    if (XMLTools::version_compare(version, "1.4.20")>=0)
+        opt_wait = "-w ";
+    else
+        opt_wait = "";
+
+    res += opt_wait;
 
     if (ipt_comp->my_table != "filter") res += "-t " + ipt_comp->my_table + " ";
 
@@ -265,7 +280,7 @@ string PolicyCompiler_ipt::PrintRule::_printModules(PolicyRule *rule)
             if (lb>0) ostr << " --limit-burst " << lb;
         }
     } else {
-        if (ruleopt!=NULL && (lim=ruleopt->getInt("limit_value"))>0)
+        if (ruleopt!=nullptr && (lim=ruleopt->getInt("limit_value"))>0)
         {
             if (ruleopt->getBool("limit_value_not"))
                 ostr << " -m limit \\! --limit " << lim;
@@ -280,7 +295,7 @@ string PolicyCompiler_ipt::PrintRule::_printModules(PolicyRule *rule)
         }
     }
 
-    if (ruleopt!=NULL && (lim=ruleopt->getInt("connlimit_value"))>0)
+    if (ruleopt!=nullptr && (lim=ruleopt->getInt("connlimit_value"))>0)
     {
         if (ruleopt->getBool("connlimit_above_not"))
             ostr << " -m connlimit \\! --connlimit-above " << lim;
@@ -291,7 +306,7 @@ string PolicyCompiler_ipt::PrintRule::_printModules(PolicyRule *rule)
         if (ml>0) ostr << " --connlimit-mask " << ml;
     }
 
-    if (ruleopt!=NULL && (lim=ruleopt->getInt("hashlimit_value"))>0)
+    if (ruleopt!=nullptr && (lim=ruleopt->getInt("hashlimit_value"))>0)
     {
         string module_name = "hashlimit";
         if (ruleopt->getBool("hashlimit_dstlimit"))
@@ -420,6 +435,10 @@ string PolicyCompiler_ipt::PrintRule::_printTarget(PolicyRule *rule)
         return ostr.str();
 
 
+    if (compiler->fw->getStr("host_OS")=="linux317" &&
+         compiler->getCachedFwOpt()->getBool("use_ULOG") &&
+         target=="LOG") target="NFLOG";
+
     // there is no ULOG for ip6tables yet
     if (!ipt_comp->ipv6 && compiler->getCachedFwOpt()->getBool("use_ULOG") &&
          target=="LOG") target="ULOG";
@@ -429,9 +448,9 @@ string PolicyCompiler_ipt::PrintRule::_printTarget(PolicyRule *rule)
     if (target=="REJECT")
       ostr << _printActionOnReject(rule);
 
-    if (target=="LOG" || target=="ULOG")    
+    if (target=="LOG" || target=="ULOG" || target=="NFLOG")
         ostr << _printLogParameters(rule);
-    
+
     if (target=="CONNMARK")
     {
         ostr << ruleopt->getStr("CONNMARK_arg");
@@ -460,8 +479,8 @@ string PolicyCompiler_ipt::PrintRule::_printDirectionAndInterface(PolicyRule *ru
     RuleElementItf *itfrel = rule->getItf();
 
     QString iface_name;
-    FWObject *rule_iface_obj = NULL;
-    Interface *rule_iface = NULL;
+    FWObject *rule_iface_obj = nullptr;
+    Interface *rule_iface = nullptr;
 
     if ( ! itfrel->isAny())
     {
@@ -539,8 +558,10 @@ string PolicyCompiler_ipt::PrintRule::_printActionOnReject(PolicyRule *rule)
     PolicyCompiler_ipt *ipt_comp = dynamic_cast<PolicyCompiler_ipt*>(compiler);
 
 //    RuleElementSrv *srvrel=rule->getSrv();
+#ifndef NDEBUG
     Service *srv = compiler->getFirstSrv(rule);
     assert(srv);
+#endif
 
     string s = ipt_comp->getActionOnReject(rule);
     if (!s.empty()) 
@@ -597,7 +618,7 @@ string PolicyCompiler_ipt::PrintRule::_printActionOnReject(PolicyRule *rule)
 
 string PolicyCompiler_ipt::PrintRule::_printGlobalLogParameters()
 {
-    return _printLogParameters(NULL);
+    return _printLogParameters(nullptr);
 }
 
 string PolicyCompiler_ipt::PrintRule::_printLogPrefix(const string &rule_num,
@@ -656,7 +677,7 @@ string PolicyCompiler_ipt::PrintRule::_printLogPrefix(PolicyRule *rule,
 
     QString action = QString(rule->getStr("stored_action").c_str()).toUpper();
 
-    RuleElementItf *itf_re = rule->getItf(); assert(itf_re!=NULL);
+    RuleElementItf *itf_re = rule->getItf(); assert(itf_re!=nullptr);
     FWObject *rule_iface = FWObjectReference::getObject(itf_re->front());
     string rule_iface_name =  rule_iface->getName();
 
@@ -686,14 +707,33 @@ string PolicyCompiler_ipt::PrintRule::_printLogParameters(PolicyRule *rule)
     PolicyCompiler_ipt *ipt_comp = dynamic_cast<PolicyCompiler_ipt*>(compiler);
     std::ostringstream str;
     string s;
-    FWOptions *ruleopt = (rule!=NULL) ? 
+    FWOptions *ruleopt = (rule!=nullptr) ? 
         rule->getOptionsObject() : compiler->getCachedFwOpt();
+
+    bool use_nflog = (compiler->getCachedFwOpt()->getBool("use_ULOG") &&
+                      compiler->fw->getStr("host_OS")=="linux317");
 
     // there is no ULOG for ip6tables yet
     bool use_ulog = (!ipt_comp->ipv6 &&
                      compiler->getCachedFwOpt()->getBool("use_ULOG"));
 
-    if (use_ulog)
+    if (use_nflog)
+    {
+        s=ruleopt->getStr("nflog_group");
+        if (s.empty())  s=compiler->getCachedFwOpt()->getStr("ulog_nlgroup");
+        if (!s.empty())
+            str << " --nflog-group " << s;
+
+        s=ruleopt->getStr("log_prefix");
+        if (s.empty())  s=compiler->getCachedFwOpt()->getStr("log_prefix");
+        if (!s.empty())
+            str << " --nflog-prefix " << _printLogPrefix(rule, s);
+
+        int r=compiler->getCachedFwOpt()->getInt("ulog_cprange");
+        if (r!=0)  str << " --nflog-range " << r << " ";
+        r=compiler->getCachedFwOpt()->getInt("ulog_qthreshold");
+        if (r!=0)  str << " --nflog-threshold " << r << " ";
+    } else if (use_ulog)
     {
         s=ruleopt->getStr("ulog_nlgroup");
         if (s.empty())  s=compiler->getCachedFwOpt()->getStr("ulog_nlgroup");
@@ -754,17 +794,17 @@ string PolicyCompiler_ipt::PrintRule::_printLimit(libfwbuilder::PolicyRule *rule
     FWOptions *ruleopt =rule->getOptionsObject();
     FWOptions *compopt =compiler->getCachedFwOpt();
 
-    if ( (ruleopt!=NULL && (l=ruleopt->getInt("limit_value"))>0) || 
+    if ( (ruleopt!=nullptr && (l=ruleopt->getInt("limit_value"))>0) || 
          (l=compopt->getInt("limit_value"))>0 ) 
     {
 	str << "  -m limit --limit " << l;
 
-        if (ruleopt!=NULL) s=ruleopt->getStr("limit_suffix");
+        if (ruleopt!=nullptr) s=ruleopt->getStr("limit_suffix");
 	if (s.empty()) 	   s=compopt->getStr("limit_suffix");
 	if (!s.empty()) str << s;
         
         lb=-1;
-	if (ruleopt!=NULL) lb=ruleopt->getInt("limit_burst");
+	if (ruleopt!=nullptr) lb=ruleopt->getInt("limit_burst");
 	if (lb<0)          lb=compopt->getInt("limit_burst");
 	if (lb>0)          str << " --limit-burst " << lb;
     }
@@ -1031,7 +1071,7 @@ string PolicyCompiler_ipt::PrintRule::_printSrcService(RuleElementSrv  *rel)
  * find the object. I'd rather use a cached copy in the compiler
  */
     FWObject *o=rel->front();
-    if (o && FWReference::cast(o)!=NULL) o=FWReference::cast(o)->getPointer();
+    if (o && FWReference::cast(o)!=nullptr) o=FWReference::cast(o)->getPointer();
 
     Service *srv= Service::cast(o);
 
@@ -1056,7 +1096,7 @@ string PolicyCompiler_ipt::PrintRule::_printSrcService(RuleElementSrv  *rel)
 	for (FWObject::iterator i=rel->begin(); i!=rel->end(); i++)
         {
 	    FWObject *o= *i;
-	    if (FWReference::cast(o)!=NULL) o=FWReference::cast(o)->getPointer();
+	    if (FWReference::cast(o)!=nullptr) o=FWReference::cast(o)->getPointer();
 
 	    Service *s=Service::cast( o );
 	    assert(s);
@@ -1085,7 +1125,7 @@ string PolicyCompiler_ipt::PrintRule::_printDstService(RuleElementSrv  *rel)
     PolicyCompiler_ipt *ipt_comp=dynamic_cast<PolicyCompiler_ipt*>(compiler);
     std::ostringstream  ostr;
     FWObject *o=rel->front();
-    if (o && FWReference::cast(o)!=NULL) o=FWReference::cast(o)->getPointer();
+    if (o && FWReference::cast(o)!=nullptr) o=FWReference::cast(o)->getPointer();
 
     Service *srv= Service::cast(o);
 
@@ -1160,7 +1200,7 @@ string PolicyCompiler_ipt::PrintRule::_printDstService(RuleElementSrv  *rel)
 	for (FWObject::iterator i=rel->begin(); i!=rel->end(); i++) 
         {
 	    FWObject *o= *i;
-	    if (FWReference::cast(o)!=NULL) o=FWReference::cast(o)->getPointer();
+	    if (FWReference::cast(o)!=nullptr) o=FWReference::cast(o)->getPointer();
 
 	    Service *s=Service::cast( o );
 	    assert(s);
@@ -1187,7 +1227,7 @@ string PolicyCompiler_ipt::PrintRule::_printSrcAddr(RuleElement *rel, Address  *
 {
     PolicyCompiler_ipt *ipt_comp=dynamic_cast<PolicyCompiler_ipt*>(compiler);
     string res;
-    if (AddressRange::cast(o)!=NULL)
+    if (AddressRange::cast(o)!=nullptr)
     {
         AddressRange *ar = AddressRange::cast(o);
         const InetAddr &range_start = ar->getRangeStart();
@@ -1205,7 +1245,7 @@ string PolicyCompiler_ipt::PrintRule::_printSrcAddr(RuleElement *rel, Address  *
     }
 
     MultiAddressRunTime *atrt = MultiAddressRunTime::cast(o);
-    if (atrt!=NULL && atrt->getSubstitutionTypeName()==AddressTable::TYPENAME &&
+    if (atrt!=nullptr && atrt->getSubstitutionTypeName()==AddressTable::TYPENAME &&
         ipt_comp->using_ipset)
     {
         return _printIpSetMatch(o, rel);
@@ -1218,7 +1258,7 @@ string PolicyCompiler_ipt::PrintRule::_printDstAddr(RuleElement *rel, Address  *
 {
     PolicyCompiler_ipt *ipt_comp=dynamic_cast<PolicyCompiler_ipt*>(compiler);
     string res;
-    if (AddressRange::cast(o)!=NULL)
+    if (AddressRange::cast(o)!=nullptr)
     {
         AddressRange *ar = AddressRange::cast(o);
         const InetAddr &range_start = ar->getRangeStart();
@@ -1235,7 +1275,7 @@ string PolicyCompiler_ipt::PrintRule::_printDstAddr(RuleElement *rel, Address  *
     }
 
     MultiAddressRunTime *atrt = MultiAddressRunTime::cast(o);
-    if (atrt!=NULL && atrt->getSubstitutionTypeName()==AddressTable::TYPENAME &&
+    if (atrt!=nullptr && atrt->getSubstitutionTypeName()==AddressTable::TYPENAME &&
         ipt_comp->using_ipset)
     {
         return _printIpSetMatch(o, rel);
@@ -1271,7 +1311,7 @@ string PolicyCompiler_ipt::PrintRule::_printAddr(Address  *o)
     std::ostringstream  ostr;
 
     MultiAddressRunTime *atrt = MultiAddressRunTime::cast(o);
-    if (atrt!=NULL)
+    if (atrt!=nullptr)
     {
         if (atrt->getSubstitutionTypeName()==AddressTable::TYPENAME)
         {
@@ -1296,10 +1336,10 @@ string PolicyCompiler_ipt::PrintRule::_printAddr(Address  *o)
         // to MultiAddressRunTime at this point. If we get some other
         // kind of MultiAddressRunTime object, we do not know what to do
         // with it so we stop.
-        assert(atrt==NULL);
+        assert(atrt==nullptr);
     }
 
-    if (Interface::cast(o)!=NULL)
+    if (Interface::cast(o)!=nullptr)
     {
         Interface *iface=Interface::cast(o);
         if (iface->isDyn())
@@ -1311,7 +1351,7 @@ string PolicyCompiler_ipt::PrintRule::_printAddr(Address  *o)
     const InetAddr *addr = o->getAddressPtr();
     const InetAddr *mask = o->getNetmaskPtr();
 
-    if (addr==NULL)
+    if (addr==nullptr)
     {
         compiler->warning(
             string("Empty inet address in object ") +
@@ -1321,15 +1361,15 @@ string PolicyCompiler_ipt::PrintRule::_printAddr(Address  *o)
         return ostr.str();
     }
 
-    // Note that mask can be NULL, for example if o is AddressRange.
-    if (addr->isAny() && (mask==NULL || mask->isAny()))
+    // Note that mask can be nullptr, for example if o is AddressRange.
+    if (addr->isAny() && (mask==nullptr || mask->isAny()))
     {
         ostr << "0/0 ";
     } else 
     {
         ostr << addr->toString();
 
-        if (Interface::cast(o)==NULL &&
+        if (Interface::cast(o)==nullptr &&
             Address::cast(o)->dimension() > 1 &&
             !mask->isHostMask())
         {
@@ -1346,7 +1386,7 @@ string PolicyCompiler_ipt::PrintRule::_printTimeInterval(PolicyRule *r)
     std::ostringstream  ostr;
 
     RuleElementInterval* ri=r->getWhen();
-    if (ri==NULL || ri->isAny()) return "";
+    if (ri==nullptr || ri->isAny()) return "";
 
     std::map<int,std::string>  daysofweek;
 
@@ -1364,7 +1404,7 @@ string PolicyCompiler_ipt::PrintRule::_printTimeInterval(PolicyRule *r)
     string days_of_week;
 
     Interval *interval = compiler->getFirstWhen(r);
-    assert(interval!=NULL);
+    assert(interval!=nullptr);
 
     interval->getStartTime( &smin, &shour, &sday, &smonth, &syear, &sdayofweek);
     interval->getEndTime(   &emin, &ehour, &eday, &emonth, &eyear, &edayofweek);
@@ -1439,6 +1479,10 @@ string PolicyCompiler_ipt::PrintRule::_printTimeInterval(PolicyRule *r)
             }
         }
 
+        if ( (XMLTools::version_compare(version, "1.4.11") >=0 ) && compiler->getCachedFwOpt()->getBool("use_kerneltz")) {
+            ostr << " --kerneltz";
+        }
+
     } else
     {
         /* "old" iptables time module
@@ -1507,7 +1551,7 @@ bool  PolicyCompiler_ipt::PrintRule::processNext()
 {
     PolicyCompiler_ipt *ipt_comp=dynamic_cast<PolicyCompiler_ipt*>(compiler);
     PolicyRule         *rule    =getNext(); 
-    if (rule==NULL) return false;
+    if (rule==nullptr) return false;
 
     string chain = rule->getStr("ipt_chain");
     if (ipt_comp->chain_usage_counter[chain] > 0)
@@ -1536,19 +1580,19 @@ string PolicyCompiler_ipt::PrintRule::PolicyRuleToString(PolicyRule *rule)
     RuleElementSrc *srcrel=rule->getSrc();
     ref=srcrel->front();
     Address        *src=Address::cast(FWReference::cast(ref)->getPointer());
-    if(src==NULL)
+    if(src==nullptr)
         compiler->abort(rule, string("Broken SRC in ") + rule->getLabel());
 
     RuleElementDst *dstrel=rule->getDst();
     ref=dstrel->front();
     Address        *dst=Address::cast(FWReference::cast(ref)->getPointer());
-    if(dst==NULL)
+    if(dst==nullptr)
         compiler->abort(rule, string("Broken DST in ") + rule->getLabel());
 
     RuleElementSrv *srvrel=rule->getSrv();
     ref=srvrel->front();
     Service        *srv=Service::cast(FWReference::cast(ref)->getPointer());
-    if(srv==NULL)
+    if(srv==nullptr)
         compiler->abort(rule, string("Broken SRV in ") + rule->getLabel());
 
 
@@ -1632,11 +1676,17 @@ string PolicyCompiler_ipt::PrintRule::PolicyRuleToString(PolicyRule *rule)
 */
     if (!ruleopt->getBool("stateless") || rule->getBool("force_state_check") )
     {
+        string state_module_option;
         /*
          * But not, when the line already contains a state matching
          */
-        if (command_line.str().find("-m state --state", 0) == string::npos)
-            command_line << " -m state --state NEW ";
+        if (XMLTools::version_compare(version, "1.4.4")>=0)
+            state_module_option = "conntrack --ctstate";
+        else
+            state_module_option = "state --state";
+
+        if (command_line.str().find("-m " + state_module_option, 0) == string::npos)
+            command_line << " -m " << state_module_option << " NEW ";
     }
 
     command_line << _printTimeInterval(rule);
@@ -1708,6 +1758,7 @@ string PolicyCompiler_ipt::PrintRule::_printOptionalGlobalRules()
     PolicyCompiler_ipt *ipt_comp = dynamic_cast<PolicyCompiler_ipt*>(compiler);
     ostringstream res;
     bool isIPv6 = ipt_comp->ipv6;
+    string state_module_option;
 
     string s = compiler->getCachedFwOpt()->getStr("linux24_ip_forward");
     bool ipforward= (s.empty() || s=="1" || s=="On" || s=="on");
@@ -1728,6 +1779,13 @@ string PolicyCompiler_ipt::PrintRule::_printOptionalGlobalRules()
     configlet.setVariable("accept_established", 
                           compiler->getCachedFwOpt()->getBool("accept_established") &&
                           ipt_comp->my_table=="filter");
+
+    if (XMLTools::version_compare(version, "1.4.4")>=0)
+        state_module_option = "conntrack --ctstate";
+    else
+        state_module_option = "state --state";
+
+    configlet.setVariable("state_module_option", state_module_option.c_str());
 
     list<FWObject*> ll = compiler->fw->getByTypeDeep(Interface::TYPENAME);
     for (FWObject::iterator i=ll.begin(); i!=ll.end(); i++)
@@ -1808,7 +1866,7 @@ void PolicyCompiler_ipt::PrintRule::_printBackupSSHAccessRules(Configlet *conf)
          ! compiler->getCachedFwOpt()->getStr("mgmt_addr").empty() )
     {
         string addr_str = compiler->getCachedFwOpt()->getStr("mgmt_addr");
-        InetAddrMask *inet_addr = NULL;
+        InetAddrMask *inet_addr = nullptr;
         bool addr_is_good = true;
         if (isIPv6)
         {

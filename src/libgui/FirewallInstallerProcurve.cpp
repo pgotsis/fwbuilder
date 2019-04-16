@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
@@ -64,11 +63,11 @@ bool FirewallInstallerProcurve::packInstallJobsList(Firewall*)
 {
     if (fwbdebug)
         qDebug("FirewallInstallerProcurve::packInstallJobList  script=%s",
-               cnf->script.toAscii().constData());
+               cnf->script.toLatin1().constData());
     job_list.clear();
 
     Management *mgmt = cnf->fwobj->getManagementObject();
-    assert(mgmt!=NULL);
+    assert(mgmt!=nullptr);
     PolicyInstallScript *pis = mgmt->getPolicyInstallScript();
     if (pis->getCommand()!="")
     {
@@ -147,7 +146,7 @@ void FirewallInstallerProcurve::activatePolicy(const QString&, const QString&)
     packSSHArgs(args);
     if (cnf->verbose) inst_dlg->displayCommand(args);
 
-    SSHProcurve *ssh_object = NULL;
+    SSHProcurve *ssh_object = nullptr;
     ssh_object = new SSHProcurve(inst_dlg,
                                  cnf->fwobj->getName().c_str(),
                                  args,

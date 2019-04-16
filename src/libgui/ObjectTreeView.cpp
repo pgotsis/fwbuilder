@@ -24,7 +24,6 @@
 */
 
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 
@@ -47,6 +46,11 @@
 #include "fwbuilder/Routing.h"
 #include "fwbuilder/Policy.h"
 #include "fwbuilder/Resources.h"
+#include "fwbuilder/TCPUDPService.h"
+#include "fwbuilder/ServiceGroup.h"
+#include "fwbuilder/FWServiceReference.h"
+#include "fwbuilder/AddressRange.h"
+#include "fwbuilder/Network.h"
 
 #include <QAbstractItemView>
 #include <QBitmap>
@@ -81,7 +85,7 @@ using namespace libfwbuilder;
 ObjectTreeView::ObjectTreeView(ProjectPanel* project,
                                QWidget* parent,
                                const char * name,
-                               Qt::WFlags f) :
+                               Qt::WindowFlags f) :
     QTreeWidget(parent), 
     m_project(project)
 {
@@ -102,8 +106,8 @@ ObjectTreeView::ObjectTreeView(ProjectPanel* project,
     setExpandsOnDoubleClick(false);
 
     setDragEnabled(true);
-    item_before_drag_started=NULL;
-    lastSelected = NULL;
+    item_before_drag_started=nullptr;
+    lastSelected = nullptr;
     second_click = false;
     selectionFrozen = false;
     expandOrCollapse = false;
@@ -148,7 +152,7 @@ ObjectTreeView::ObjectTreeView(ProjectPanel* project,
     //header()->hide();
 
     header()->setDefaultAlignment(Qt::AlignLeft);
-    header()->setResizeMode(QHeaderView::Interactive);
+    header()->setSectionResizeMode(QHeaderView::Interactive);
 
     showOrHideAttributesColumn();
 
@@ -156,11 +160,11 @@ ObjectTreeView::ObjectTreeView(ProjectPanel* project,
 
     setAutoScroll(true);
     setAutoScrollMargin(50);
-    setAllColumnsShowFocus( TRUE );
+    setAllColumnsShowFocus( true );
     setSelectionMode( ExtendedSelection );
     setAcceptDrops( true );
     setDragDropMode( QAbstractItemView::DragDrop );
-    setRootIsDecorated( TRUE );
+    setRootIsDecorated( true );
 
     setFocusPolicy(Qt::StrongFocus);
 
@@ -212,20 +216,23 @@ bool ObjectTreeView::event( QEvent *event )
         {
             int cx = pos.x(), cy = pos.y();
 
-            FWObject  *obj=NULL;
+            FWObject  *obj=nullptr;
             QRect      cr;
 
             QTreeWidgetItem *itm = itemAt(QPoint(cx, cy - header()->height()));
-            if (itm==NULL) return false;
+            if (itm==nullptr) return false;
             ObjectTreeViewItem *oivi  = dynamic_cast<ObjectTreeViewItem*>(itm);
-            assert(oivi!=NULL);
+            assert(oivi!=nullptr);
             obj = oivi->getFWObject();
 
-            if (obj==NULL) return false;
+            if (obj==nullptr) return false;
 
-            if (obj->getId() == FWObjectDatabase::ANY_ADDRESS_ID ||
-                obj->getId() == FWObjectDatabase::ANY_SERVICE_ID ||
-                obj->getId() == FWObjectDatabase::ANY_INTERVAL_ID)
+            if (obj->getId() == FWObjectDatabase::ANY_ADDRESS_ID  ||
+                obj->getId() == FWObjectDatabase::ANY_SERVICE_ID  ||
+                obj->getId() == FWObjectDatabase::ANY_INTERVAL_ID ||
+                obj->getId() == FWObjectDatabase::DUMMY_ADDRESS_ID ||
+                obj->getId() == FWObjectDatabase::DUMMY_SERVICE_ID ||
+                obj->getId() == FWObjectDatabase::DUMMY_INTERFACE_ID)
                 return false;
 
             cr = visualItemRect(itm);
@@ -261,7 +268,7 @@ void ObjectTreeView::itemCollapsed(QTreeWidgetItem* itm)
     expandOrCollapse = true;
 
     ObjectTreeViewItem *otvi = dynamic_cast<ObjectTreeViewItem*>(itm);
-    assert(otvi!=NULL);
+    assert(otvi!=nullptr);
     FWObject *o = otvi->getFWObject();
     if (o)
     {
@@ -275,7 +282,7 @@ void ObjectTreeView::itemExpanded(QTreeWidgetItem* itm)
     expandOrCollapse = true;
 
     ObjectTreeViewItem *otvi=dynamic_cast<ObjectTreeViewItem*>(itm);
-    assert(otvi!=NULL);
+    assert(otvi!=nullptr);
     FWObject *o = otvi->getFWObject();
     if (o)
     {
@@ -312,7 +319,7 @@ FWObject* ObjectTreeView::getCurrentObject()
 {
     QTreeWidgetItem *ovi = currentItem();
     ObjectTreeViewItem *otvi=dynamic_cast<ObjectTreeViewItem*>(ovi);
-    if (otvi==NULL) return NULL;
+    if (otvi==nullptr) return nullptr;
     return otvi->getFWObject();
 }
 
@@ -340,7 +347,7 @@ void ObjectTreeView::updateTreeIcons()
         FWObject *obj = otvi->getFWObject();
 
         /* We can have obj==0 if it's a user-create subfolder */
-        if (obj == 0) continue;
+        if (obj == nullptr) continue;
 
         QPixmap pm_obj;
         IconSetter::setObjectIcon(obj, &pm_obj, 0);
@@ -352,12 +359,12 @@ void ObjectTreeView::updateTreeIcons()
 void ObjectTreeView::startDrag(Qt::DropActions supportedActions)
 {
     QTreeWidgetItem *ovi = currentItem();
-    if (ovi==NULL) return;
+    if (ovi==nullptr) return;
 
     FWObject *current_obj = getCurrentObject();
 
     /* User-defined folders can't be dragged */
-    if (current_obj == 0) return;
+    if (current_obj == nullptr) return;
 
     if (fwbdebug) qDebug("ObjectTreeView::startDrag: this: %p current_obj: %s",
                          this, current_obj->getName().c_str());
@@ -371,8 +378,13 @@ void ObjectTreeView::startDrag(Qt::DropActions supportedActions)
     the end of void QListView::mouseMoveEvent( QMouseEvent * e)
     (See code after they decided that they do not need to call startDrag())
 
-    if (FWBTree().isSystem(obj)) return NULL;
+    if (FWBTree().isSystem(obj)) return nullptr;
 */
+    if ((current_obj->getId() == FWObjectDatabase::DUMMY_ADDRESS_ID)   ||
+        (current_obj->getId() == FWObjectDatabase::DUMMY_INTERFACE_ID) ||
+        (current_obj->getId() == FWObjectDatabase::DUMMY_SERVICE_ID))
+        return;
+
     QString icn = (":/Icons/"+current_obj->getTypeName()+"/icon-ref").c_str();
 
     vector<FWObject*> so = getSimplifiedSelection();
@@ -469,22 +481,22 @@ void ObjectTreeView::dragEnterEvent( QDragEnterEvent *ev)
 static bool isValidDropTarget(QTreeWidgetItem *item, list<FWObject *> &objs)
 {
     ObjectTreeViewItem *dest = dynamic_cast<ObjectTreeViewItem *>(item);
-    if (dest == 0) return false;
+    if (dest == nullptr) return false;
 
     bool dragIsNoop = true;
     list<FWObject *>::const_iterator iter;
     for (iter = objs.begin(); iter != objs.end(); ++iter) {
         FWObject *dragobj = *iter;
-        assert(dragobj != 0);
+        assert(dragobj != nullptr);
 
-        if (Interface::cast(dragobj) != 0 ||
-            Interface::cast(dragobj->getParent()) != 0 ||
-            Policy::cast(dragobj) != 0 ||
-            NAT::cast(dragobj) != 0 ||
-            Routing::cast(dragobj) != 0) return false;
+        if (Interface::cast(dragobj) != nullptr ||
+            Interface::cast(dragobj->getParent()) != nullptr ||
+            Policy::cast(dragobj) != nullptr ||
+            NAT::cast(dragobj) != nullptr ||
+            Routing::cast(dragobj) != nullptr) return false;
 
         /* See if destination is a user folder */
-        if (dest->getUserFolderParent() != 0) {
+        if (dest->getUserFolderParent() != nullptr) {
             /* Dragged object has to match parent of user folder */
             if (dest->getUserFolderParent() != dragobj->getParent()) {
                 return false;
@@ -536,11 +548,11 @@ void ObjectTreeView::dragMoveEvent(QDragMoveEvent *ev)
 void ObjectTreeView::dropEvent(QDropEvent *ev)
 {
     // only accept drops from the same instance of fwbuilder
-    if (ev->source() == NULL) return;
+    if (ev->source() == nullptr) return;
 
     ObjectTreeViewItem *dest =
         dynamic_cast<ObjectTreeViewItem *>(itemAt(ev->pos()));
-    if (dest == 0) {
+    if (dest == nullptr) {
     notWanted:
         ev->setAccepted(false);
         return;
@@ -569,7 +581,7 @@ void ObjectTreeView::mouseMoveEvent( QMouseEvent * e )
        clicks and tries to drag something non-draggable. */
     if (state() == DragSelectingState) return;
     QTreeWidget::mouseMoveEvent(e);
-    if (e==NULL)  return;
+    if (e==nullptr)  return;
 }
 
 void ObjectTreeView::mousePressEvent( QMouseEvent *e )
@@ -647,7 +659,7 @@ void ObjectTreeView::mouseReleaseEvent( QMouseEvent *e )
         qDebug("ObjectTreeView::mouseReleaseEvent 2 selectedObjects.size()=%d getCurrentObject()=%p current object %s",
                int(selectedObjects.size()),
                getCurrentObject(),
-               (getCurrentObject()!=NULL)?getCurrentObject()->getName().c_str():"nil");
+               (getCurrentObject()!=nullptr)?getCurrentObject()->getName().c_str():"nil");
 
     if (expandOrCollapse) return;  // user expanded or collapsed subtree,
                                    // no need to change object in the editor
@@ -730,7 +742,7 @@ void ObjectTreeView::itemOpened ()
 
 void ObjectTreeView::clearLastSelected()
 {
-    lastSelected = NULL;
+    lastSelected = nullptr;
 }
 
 
@@ -767,7 +779,7 @@ void ObjectTreeView::itemSelectionChanged()
         ObjectTreeViewItem *otvi = dynamic_cast<ObjectTreeViewItem*>(itm);
 
         FWObject *obj = otvi->getFWObject();
-        if (obj == 0) continue;
+        if (obj == nullptr) continue;
 
         selectedObjects.push_back(otvi->getFWObject());
 
@@ -812,7 +824,7 @@ void ObjectTreeView::ExpandTreeItems(const set<int> &ids)
         QTreeWidgetItem *itm = *it;
         ObjectTreeViewItem *otvi=dynamic_cast<ObjectTreeViewItem*>(itm);
         FWObject *obj = otvi->getFWObject();
-        if (obj == 0) continue;
+        if (obj == nullptr) continue;
         if (ids.count(obj->getId()))
             itm->setExpanded(true);
     }
@@ -840,7 +852,7 @@ QSet<QTreeWidgetItem*> ObjectTreeView::resolveParents(QTreeWidgetItem *child)
 {
     QSet<QTreeWidgetItem*> parents;
     parents.insert(child);
-    if (child->parent() == NULL) return parents;
+    if (child->parent() == nullptr) return parents;
     parents.unite(resolveParents(child->parent()));
     return parents;
 }
@@ -851,13 +863,157 @@ void ObjectTreeView::updateFilter()
     setFilter(filter);
 }
 
+static bool filterMatchesPortRange(const QStringList &args,
+                                   FWObject *obj)
+{
+    if (!obj) return false;
+
+    // We traverse the service group. If the children are references
+    // they may be pointing to ports
+    if (obj->getTypeName() == ServiceGroup::TYPENAME) {
+        for (list<FWObject*>::const_iterator it=obj->begin(); it!=obj->end(); ++it) {
+            FWServiceReference *ref = FWServiceReference::cast(*it);
+            if (ref && filterMatchesPortRange(args, ref->getPointer()))
+                return true;
+        }
+    }
+
+    TCPUDPService *service = dynamic_cast<TCPUDPService*>(obj);
+    if (!service) return false;
+
+    QRegExp rx("\\s*([><]?)\\s*(\\d*)(?:-(\\d*))?");
+
+    foreach (const QString &arg, args) {
+
+        if (!rx.exactMatch(arg)) continue;
+
+        int lowerBound = rx.cap(2).toInt(), upperBound = lowerBound;
+
+        if (rx.pos(3) != -1) {
+            upperBound = rx.cap(3).toInt();
+        }
+
+        if (rx.pos(1) != -1) {
+            if (rx.pos(3) != -1) // [><] cannot be combined with range
+                continue;
+
+            if (rx.cap(1) == ">") {
+                upperBound = 65535;
+                ++lowerBound; // Adjust for using >= below
+            } else {// "<"
+                lowerBound = 1;
+                --upperBound; // Adjust for using <= below
+            }
+        }
+
+        if (lowerBound > upperBound) continue;
+
+        int ds = service->getDstRangeStart(), de = service->getDstRangeEnd(),
+                ss = service->getSrcRangeStart(), se = service->getSrcRangeEnd();
+
+        if (ds && de && (lowerBound <= ds) && (de <= upperBound)) return true;
+        if (ss && se && (lowerBound <= ss) && (se <= upperBound)) return true;
+    } // End foreach
+
+    return false;
+}
+
+static bool filterMatchesIpAddress(const QStringList &args,
+                                   FWObject *obj)
+{
+    if (!obj) return false;
+
+    // We traverse the object group. If the children are references
+    // they may be pointing to adresses
+    if (obj->getTypeName() == ObjectGroup::TYPENAME) {
+        for (list<FWObject*>::const_iterator it=obj->begin(); it!=obj->end(); ++it) {
+            FWObjectReference *ref = FWObjectReference::cast(*it);
+            if (ref && filterMatchesIpAddress(args, ref->getPointer()))
+                return true;
+        }
+    }
+
+    Address *addr = dynamic_cast<Address*>(obj);
+    if (!addr) return false;
+
+    QRegExp rx("\\s*([.:0-9a-fA-F]+)(?:/([.:0-9a-fA-F]+))?");
+
+    InetAddrMask searchAddrAndMask;
+    foreach (const QString &arg, args) {
+
+        if (!rx.exactMatch(arg)) continue;
+
+        try {
+            std::string netmask = rx.cap(2).isEmpty() ? "32" : rx.cap(2).toStdString();
+            InetAddr ipv4addr(rx.cap(1).toStdString());
+            InetAddr ipv4mask(netmask);
+            searchAddrAndMask = InetAddrMask(ipv4addr, ipv4mask);
+        } catch (const FWException &) { // Could not create IPv4 object. Trying IPv6.
+            try {
+                int netmask = rx.cap(2).isEmpty() ? 128 : rx.cap(2).toInt();
+                InetAddr ipv6addr(AF_INET6, rx.cap(1).toStdString());
+                InetAddr ipv6mask(AF_INET6, netmask);
+                searchAddrAndMask = InetAddrMask(ipv6addr, ipv6mask);
+            } catch (const FWException &) { // Could not create IPv6 object.
+                // User did not submit a valid IP address
+                return false;
+            }
+        }
+
+        const InetAddr *searchAddr = searchAddrAndMask.getAddressPtr();
+
+        if (addr->getTypeName() == AddressRange::TYPENAME) {
+            AddressRange *addrRange = dynamic_cast<AddressRange*>(obj);
+            if (addrRange
+                && (searchAddr->addressFamily() == addrRange->getRangeStart().addressFamily()) ) {
+
+                if ( !(searchAddr->opLT(addrRange->getRangeStart()))
+                     && !(searchAddr->opGT(addrRange->getRangeEnd())) )
+                    return true;
+            }
+            continue; // Next argument
+        }
+
+        const InetAddr *inetAddr = addr->getAddressPtr();
+
+
+        if ( inetAddr && (inetAddr->addressFamily() == searchAddr->addressFamily()) ) {
+            if (addr->getTypeName() == Network::TYPENAME) {
+                if (addr->belongs(*searchAddr))
+                    return true;
+            }
+            if (searchAddrAndMask.belongs(*inetAddr))
+                return true;
+        }
+    } // End foreach
+
+    return false;
+}
+
+static bool filterMatchesCommand(const QString &text,
+                                 ObjectTreeViewItem *item)
+{
+    QRegExp rx("(?:(port)|(ip)):(.*)", Qt::CaseInsensitive);
+    if (!rx.exactMatch(text)) return false;
+
+    QStringList args = rx.cap(3).split(",", QString::SkipEmptyParts);
+
+    if (rx.pos(1) != -1)
+        return (filterMatchesPortRange(args, item->getFWObject()));
+    else
+        return (filterMatchesIpAddress(args, item->getFWObject()));
+}
+
 static bool filterMatches(const QString &text,
                           ObjectTreeViewItem *item)
 {
     if (text.isEmpty()) return true;
     if (item->text(0).contains(text, Qt::CaseInsensitive)) return true;
 
-    if (item->getUserFolderParent() != 0) return false;
+    // Support for port and ip search
+    if (filterMatchesCommand(text, item)) return true;
+
+    if (item->getUserFolderParent() != nullptr) return false;
     FWObject *obj = item->getFWObject();
 
     QByteArray utf8 = text.toUtf8();
@@ -923,12 +1079,12 @@ void ObjectTreeView::setFilter(QString text)
         if (filterMatches(text, otvi)) {
             (*wit)->setHidden(false);
 
-            if (Firewall::cast(otvi->getFWObject()) != 0) {
+            if (Firewall::cast(otvi->getFWObject()) != nullptr) {
                 expand.push_back(otvi);
             }
 
             QTreeWidgetItem *parent = (*wit)->parent();
-            while (parent != 0) {
+            while (parent != nullptr) {
                 parent->setHidden(false);
                 parent = parent->parent();
             }

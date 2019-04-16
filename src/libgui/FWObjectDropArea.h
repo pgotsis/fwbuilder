@@ -27,7 +27,6 @@
 #ifndef __FWOBJECTDROPAREA_H_
 #define __FWOBJECTDROPAREA_H_
 
-#include "config.h"
 #include <ui_fwobjectdroparea_q.h>
 
 #include "fwbuilder/FWObject.h"
@@ -62,12 +61,12 @@ protected:
         
 public:
     Ui::FWObjectDropArea_q *m_objectDropArea;
-    FWObjectDropArea(QWidget*p, const char * n = 0, Qt::WFlags f = 0);
+    FWObjectDropArea(QWidget*p, const char * n = 0, Qt::WindowFlags f = 0);
     ~FWObjectDropArea(); 
     libfwbuilder::FWObject * getObject(){return object;};
     void setObject(libfwbuilder::FWObject * o){ object = o ;};
     void addAcceptedTypes (QString type){acceptedTypes.push_back(type);};
-    bool isEmpty() {return object==NULL;};
+    bool isEmpty() {return object==nullptr;};
     void setHelperText(const QString &text) { helperText=text; }
     virtual void mouseDoubleClickEvent ( QMouseEvent * event );
     public slots:

@@ -24,7 +24,6 @@
 */
 
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
@@ -90,10 +89,10 @@ newHostDialog::newHostDialog(QWidget *parentw, FWObject *_p) : QDialog(parentw)
                       m_dialog->cancelButton,
                       m_dialog->titleLabel);
 
-    nhst=NULL;
-    tmpldb = NULL;
+    nhst=nullptr;
+    tmpldb = nullptr;
     snmpPollCompleted=false;
-    q=NULL;
+    q=nullptr;
     unloadTemplatesLib = false;
     getInterfacesBusy = false;
 
@@ -161,9 +160,9 @@ void newHostDialog::updateTemplatePanel()
 newHostDialog::~newHostDialog()
 {
     delete m_dialog;
-    if (timer!=NULL) delete timer;
+    if (timer!=nullptr) delete timer;
 #ifdef HAVE_LIBSNMP
-    if (q!=NULL) delete q;
+    if (q!=nullptr) delete q;
 #endif
 }
 
@@ -228,7 +227,7 @@ void newHostDialog::changed()
 
 void  newHostDialog::monitor()
 {
-    if (logger==NULL || q==NULL) return;
+    if (logger==nullptr || q==nullptr) return;
 
 #ifdef HAVE_LIBSNMP
 
@@ -257,7 +256,7 @@ void  newHostDialog::monitor()
     }
 
     delete q;
-    q=NULL;
+    q=nullptr;
 
 #endif
 
@@ -270,7 +269,7 @@ void newHostDialog::getInterfacesViaSNMP()
 #ifdef HAVE_LIBSNMP
 
 // need to protect from reentry because getAddrByName processes events
-    if (q!=NULL || getInterfacesBusy) return;
+    if (q!=nullptr || getInterfacesBusy) return;
 
     snmpPollCompleted=false;
 
@@ -296,7 +295,7 @@ void newHostDialog::getInterfacesViaSNMP()
         QApplication::setOverrideCursor( QCursor( Qt::WaitCursor) );
         QString a = getAddrByName(name, AF_INET);
         QApplication::restoreOverrideCursor();
-        addr = InetAddr(a.toAscii().constData());
+        addr = InetAddr(a.toLatin1().constData());
     } catch (FWException &ex)
     {
         QMessageBox::warning(
@@ -308,10 +307,10 @@ void newHostDialog::getInterfacesViaSNMP()
         return ;
     }
 
-    logger=NULL;
+    logger=nullptr;
     m_dialog->snmpProgress->clear();
 
-    if (q!=NULL) delete q;
+    if (q!=nullptr) delete q;
     q=new SNMP_interface_query();
     q->init(addr.toString(),rcomm,SNMP_DEFAULT_RETRIES,SNMP_DEFAULT_TIMEOUT);
 
@@ -386,14 +385,14 @@ void newHostDialog::showPage(const int page)
         setFinishEnabled( TEMPLATES_PAGE, true );
 /* load templates if not loaded */
 
-        if (tmpldb==NULL)
+        if (tmpldb==nullptr)
         {
 
             MessageBoxUpgradePredicate upgrade_predicate(this);
 
             tmpldb = new FWObjectDatabase();
             tmpldb->setReadOnly( false );
-            tmpldb->load( m_dialog->templateFilePath->text().toAscii().data(),
+            tmpldb->load( m_dialog->templateFilePath->text().toLatin1().data(),
                           &upgrade_predicate, Constants::getDTDDirectory());
         }
         list<FWObject*> fl;
@@ -438,7 +437,7 @@ void newHostDialog::templateSelected(QListWidgetItem *itm)
     if (fwbdebug) qDebug("newHostDialog::templateSelected ");
 
     FWObject *o=templates[itm];
-    assert (o!=NULL);
+    assert (o!=nullptr);
 
     Host *fw = Host::cast(o);
 
@@ -575,7 +574,7 @@ void newHostDialog::finishClicked()
     {
         QListWidgetItem *itm = m_dialog->templateList->currentItem();
         FWObject *o=templates[itm];
-        assert (o!=NULL);
+        assert (o!=nullptr);
 
         FWObject *no = db->create(Host::TYPENAME);
         no->duplicate(o, true);
@@ -592,7 +591,7 @@ void newHostDialog::finishClicked()
         FWObject *o;
         o = db->create(Host::TYPENAME);
         o->setName(m_dialog->obj_name->text().toUtf8().constData());
-        if (o==NULL)
+        if (o==nullptr)
         {
           QDialog::accept();
           return;
@@ -689,7 +688,7 @@ void newHostDialog::finishClicked()
     if (unloadTemplatesLib)
     {
         delete tmpldb;
-        tmpldb = NULL;
+        tmpldb = nullptr;
 
         unloadTemplatesLib=false;
     }

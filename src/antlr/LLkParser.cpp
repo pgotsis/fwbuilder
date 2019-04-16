@@ -82,10 +82,8 @@ void LLkParser::traceOut(const char* rname)
 
 RefToken LLkParser::LT(unsigned int i)
 {
-    assert(this!=NULL);
-    assert(inputState!=NULL);
+    assert(inputState!=nullptr);
     TokenBuffer &tb = inputState->getInput();
-    assert(&tb!=NULL);
     return tb.LT(i);
 }
 

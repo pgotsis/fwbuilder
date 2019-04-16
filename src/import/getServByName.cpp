@@ -21,7 +21,6 @@
 
 */
 
-#include "../../config.h"
 
 #include "getServByName.h"
 
@@ -682,10 +681,10 @@ int GetServByName::getPortByName(const QString &name, const QString &proto)
     if ((proto == "udp" || proto == "tcp-udp") && ports["tcp"].contains(name))
         return ports["tcp"][name];
 
+    struct servent *se = getservbyname(name.toLatin1().constData(),
+                                       proto.toLatin1().constData());
 
-    struct servent *se = getservbyname(name.toAscii().constData(),
-                                       proto.toAscii().constData());
-    if (se!=NULL)
+    if (se!=nullptr)
     {
         int port = ntohs(se->s_port);
         //free(se);

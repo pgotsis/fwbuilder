@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "definitions.h"
 #include "global.h"
 #include "utils.h"
@@ -64,7 +63,7 @@ instOptionsDialog::instOptionsDialog(QWidget *parent, instConf *_cnf, bool insta
     int fw_id = -1;
     if (cnf->fwobj)
     {
-        // Note cnf->fwobj == NULL during batch install
+        // Note cnf->fwobj == nullptr during batch install
         fw_id = cnf->fwobj->getId();
     }
 
@@ -125,12 +124,17 @@ instOptionsDialog::instOptionsDialog(QWidget *parent, instConf *_cnf, bool insta
     string version = cnf->fwobj->getStr("version");
 
     if (platform=="pix" || platform=="fwsm" ||
-        platform=="iosacl" ||
+        platform=="iosacl" || platform=="nxosacl" ||
         platform=="procurve_acl" )
     {
         m_dialog->copyFWB->hide();
         m_dialog->PIXgroupBox->hide();
 
+    } else if (platform=="junosacl") {
+        m_dialog->copyFWB->hide();
+        m_dialog->PIXgroupBox->hide();
+        m_dialog->epwd->hide();
+        m_dialog->epwdLbl->hide();
     } else
     {
         m_dialog->epwd->hide();
@@ -183,7 +187,7 @@ void instOptionsDialog::savePassword()
     int fw_id = -1;
     if (cnf->fwobj)
     {
-        // Note cnf->fwobj == NULL during batch install
+        // Note cnf->fwobj == nullptr during batch install
         fw_id = cnf->fwobj->getId();
     }
 

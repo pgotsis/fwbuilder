@@ -23,7 +23,6 @@
 
 
 
-#include "config.h"
 #include "global.h"
 
 #include "TextFileEditor.h"
@@ -114,7 +113,7 @@ void TextFileEditor::save()
     if ( ! owf.exists())
     {
         if (owf.open(QIODevice::WriteOnly) &&
-            owf.write(m_dialog->editor->toPlainText().toAscii().constData()) >= 0)
+            owf.write(m_dialog->editor->toPlainText().toLatin1().constData()) >= 0)
         {
             owf.close();
             QDialog::accept();
@@ -132,7 +131,7 @@ void TextFileEditor::save()
 
     QFile wf(tmp_file_name);
     if (wf.open(QIODevice::WriteOnly) &&
-        wf.write(m_dialog->editor->toPlainText().toAscii().constData()) >= 0)
+        wf.write(m_dialog->editor->toPlainText().toLatin1().constData()) >= 0)
     {
         wf.close();
         QFile old_file(file_name);

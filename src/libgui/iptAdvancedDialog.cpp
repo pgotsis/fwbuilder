@@ -22,7 +22,6 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 */
-#include "config.h"
 #include "global.h"
 #include "platforms.h"
 
@@ -71,10 +70,10 @@ iptAdvancedDialog::iptAdvancedDialog(QWidget *parent,FWObject *o)
     setWindowTitle(QObject::tr("%1 advanced settings").arg(description.c_str()));
 
     FWOptions *fwoptions=(Firewall::cast(obj))->getOptionsObject();
-    assert(fwoptions!=NULL);
+    assert(fwoptions!=nullptr);
 
     Management *mgmt=(Firewall::cast(obj))->getManagementObject();
-    assert(mgmt!=NULL);
+    assert(mgmt!=nullptr);
 
     if (fwbdebug)
         qDebug("%s",Resources::getTargetOptionStr(
@@ -138,6 +137,8 @@ iptAdvancedDialog::iptAdvancedDialog(QWidget *parent,FWObject *o)
                          fwoptions,"action_on_reject", slm);
 
     data.registerOption(m_dialog->useModuleSet, fwoptions, "use_m_set");
+    data.registerOption(m_dialog->useKernelTz, fwoptions, "use_kerneltz");
+
 
     data.registerOption(m_dialog->mgmt_ssh, fwoptions, "mgmt_ssh");
     data.registerOption(m_dialog->mgmt_addr, fwoptions, "mgmt_addr");
@@ -217,6 +218,11 @@ iptAdvancedDialog::iptAdvancedDialog(QWidget *parent,FWObject *o)
         m_dialog->useModuleSet->setChecked(false);
     m_dialog->useModuleSet->setEnabled(can_use_module_set);
 
+    bool can_use_kerneltz = (XMLTools::version_compare(version, "1.4.11") >= 0);
+    if (!can_use_kerneltz)
+        m_dialog->useKernelTz->setChecked(false);
+    m_dialog->useKernelTz->setEnabled(can_use_kerneltz);
+
     m_dialog->tabWidget->setCurrentIndex(0);
 }
 
@@ -235,15 +241,15 @@ void iptAdvancedDialog::switchLOG_ULOG()
 void iptAdvancedDialog::accept()
 {
     ProjectPanel *project = mw->activeProject();
-    std::auto_ptr<FWCmdChange> cmd( new FWCmdChange(project, obj));
+    std::unique_ptr<FWCmdChange> cmd( new FWCmdChange(project, obj));
 
     // new_state  is a copy of the fw object
     FWObject* new_state = cmd->getNewState();
     FWOptions* fwoptions = Firewall::cast(new_state)->getOptionsObject();
-    assert(fwoptions!=NULL);
+    assert(fwoptions!=nullptr);
 
     Management *mgmt = (Firewall::cast(new_state))->getManagementObject();
-    assert(mgmt!=NULL);
+    assert(mgmt!=nullptr);
 
     data.saveAll(fwoptions);
 

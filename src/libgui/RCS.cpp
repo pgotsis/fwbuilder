@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
@@ -32,7 +31,6 @@
 #include "RCS.h"
 
 // need this for FS_SEPARATOR
-#include "fwbuilder/libfwbuilder-config.h"
 #include "fwbuilder/Tools.h"
 
 //#include "FWWindow.h"
@@ -64,7 +62,19 @@
 #  endif
 #endif
 
+#ifdef _WIN64
+#define timezone _timezone
+#endif
+
 #include <iostream>
+
+#ifndef PATH_MAX
+#ifdef MAXPATHLEN
+#define	PATH_MAX MAXPATHLEN
+#else
+#define	PATH_MAX 1024
+#endif
+#endif
 
 
 using namespace std;
@@ -75,7 +85,7 @@ QString     RCS::rlog_file_name = "";
 QString     RCS::rcsdiff_file_name = "";
 QString     RCS::ci_file_name = "";
 QString     RCS::co_file_name = "";
-RCSEnvFix*  RCS::rcsenvfix = NULL;
+RCSEnvFix*  RCS::rcsenvfix = nullptr;
 bool        RCS::rcs_available = false;
 
 /***********************************************************************
@@ -155,7 +165,7 @@ RCSEnvFix::RCSEnvFix()
     time(&clock);
     ltm = (struct tm *) localtime(&clock);
 
-#if defined(HAVE_STRUCT_TM_TM_ZONE)
+#ifndef _WIN32
 /*
  * struct tm has member tm_zone and should have member tm_gmtoff
  * autoconf checks only for tm_zone, but these two member fields come
@@ -195,7 +205,8 @@ RCSEnvFix::RCSEnvFix()
     TZOffset = tzsign + TZOffset;
 
     if (fwbdebug)
-    qDebug("tzoffset: %d TZOffset: '%s'",tzoffset,TZOffset.toAscii().constData());
+        qDebug("tzoffset: %d TZOffset: '%s'",tzoffset,TZOffset.toLatin1().constData());
+
 
 #ifdef _WIN32
 /* need this crap because Windows does not set environment variable TZ
@@ -227,15 +238,15 @@ RCSEnvFix::RCSEnvFix()
 
     env.push_back( QString("USER=") + uname);
     env.push_back( QString("LOGNAME=") + uname);
-    if (getenv("TMP") != NULL)
+    if (getenv("TMP") != nullptr)
         env.push_back( QString("TMP=") + getenv("TMP"));
-    if (getenv("TEMP")!=NULL)
+    if (getenv("TEMP")!=nullptr)
         env.push_back( QString("TEMP=") + getenv("TEMP"));
 }
 
 QStringList* RCSEnvFix::getEnv()
 {
-    if (env.empty()) return NULL;
+    if (env.empty()) return nullptr;
     return &env;
 }
 
@@ -249,28 +260,18 @@ void RCS::init()
 {
     if (rcs_file_name=="")
     {
+        rcs_file_name = QStringLiteral("rcs");
+        rlog_file_name = QStringLiteral("rlog");
+        rcsdiff_file_name = QStringLiteral("rcsdiff");
+        ci_file_name = QStringLiteral("ci");
+        co_file_name = QStringLiteral("co");
+
 #ifdef _WIN32
-        string ts;
-        ts = getPathToBinary(RCS_FILE_NAME);
-        rcs_file_name     = ts.c_str();
-
-        ts = getPathToBinary(RLOG_FILE_NAME);
-        rlog_file_name    = ts.c_str();
-
-        ts = getPathToBinary(RCSDIFF_FILE_NAME);
-        rcsdiff_file_name = ts.c_str();
-
-        ts = getPathToBinary(CI_FILE_NAME);
-        ci_file_name      = ts.c_str();
-
-        ts = getPathToBinary(CO_FILE_NAME);
-        co_file_name      = ts.c_str();
-#else
-        rcs_file_name     = RCS_FILE_NAME      ;
-        rlog_file_name    = RLOG_FILE_NAME     ;
-        rcsdiff_file_name = RCSDIFF_FILE_NAME  ;
-        ci_file_name      = CI_FILE_NAME       ;
-        co_file_name      = CO_FILE_NAME       ;
+        rcs_file_name = QStringLiteral("rcs.exe");
+        rlog_file_name = QStringLiteral("rlog.exe");
+        rcsdiff_file_name = QStringLiteral("rcsdiff.exe");
+        ci_file_name = QStringLiteral("ci.exe");
+        co_file_name = QStringLiteral("co.exe");
 #endif
     }
 
@@ -300,7 +301,7 @@ void RCS::init()
 
 RCS::RCS(const QString &file)
 {
-    if (rcsenvfix==NULL) rcsenvfix = new RCSEnvFix();
+    if (rcsenvfix==nullptr) rcsenvfix = new RCSEnvFix();
 
     if (fwbdebug) qDebug() << "RCS::RCS(" << file << ")";
 
@@ -416,8 +417,8 @@ RCS::RCS(const QString &file)
                 revisions.push_back(r);
                 if (fwbdebug)
                     qDebug("revision %s: '%s'",
-                           r.rev.toAscii().constData(),
-                           r.log.toAscii().constData());
+                           r.rev.toLatin1().constData(),
+                           r.log.toLatin1().constData());
             }
         }
         // sort list revisions; its defined like this:
@@ -443,13 +444,13 @@ RCS::~RCS()
 
 QStringList* RCS::getEnv()
 {
-    if (rcsenvfix==NULL) rcsenvfix = new RCSEnvFix();
+    if (rcsenvfix==nullptr) rcsenvfix = new RCSEnvFix();
     return rcsenvfix->getEnv();
 }
 
 RCSEnvFix*   RCS::getRCSEnvFix()
 {
-    if (rcsenvfix==NULL) rcsenvfix = new RCSEnvFix();
+    if (rcsenvfix==nullptr) rcsenvfix = new RCSEnvFix();
     return rcsenvfix;
 }
 
@@ -457,14 +458,14 @@ RCSEnvFix*   RCS::getRCSEnvFix()
 void RCS::readFromStdout()
 {
     QString s = QString(proc->readAllStandardOutput());
-    //qDebug("RCS::readFromStdout() reads: %s",s.toAscii().constData());
+    //qDebug("RCS::readFromStdout() reads: %s",s.toLatin1().constData());
     stdoutBuffer=stdoutBuffer + s;
 }
 
 void RCS::readFromStderr()
 {
     QString s = QString(proc->readAllStandardError());
-    //qDebug("RCS::readFromStderr() reads: %s", s.toAscii().constData());
+    //qDebug("RCS::readFromStderr() reads: %s", s.toLatin1().constData());
     stderrBuffer=stderrBuffer + s;
 }
 
@@ -494,10 +495,10 @@ void RCS::abandon()
     stderrBuffer="";
 
     if (fwbdebug) qDebug("starting co with environment '%s'",
-                         rcsenvfix->getEnv()->join(" ").toAscii().constData());
+                         rcsenvfix->getEnv()->join(" ").toLatin1().constData());
     if (fwbdebug) qDebug("executing command '%s %s'",
-                         co_file_name.toAscii().constData(),
-                         arglist.join(" ").toAscii().constData());
+                         co_file_name.toLatin1().constData(),
+                         arglist.join(" ").toLatin1().constData());
 
     proc->setEnvironment(*rcsenvfix->getEnv());
     proc->start( co_file_name, arglist );
@@ -532,7 +533,7 @@ void RCS::abandon()
 /**
  *  initial RCS checkin
  */
-void RCS::add() throw(libfwbuilder::FWException)
+void RCS::add()
 {
     int i = filename.lastIndexOf("/");
     QString rcspath = filename.left(i);
@@ -634,7 +635,7 @@ bool RCS::isInRCS()
     return true;
 }
 
-bool RCS::co(bool force) throw(libfwbuilder::FWException)
+bool RCS::co(bool force)
 {
     return co(selectedRev,force);
 }
@@ -667,7 +668,7 @@ bool RCS::co(bool force) throw(libfwbuilder::FWException)
  * lock
  *
  */
-bool RCS::co(const QString &rev,bool force) throw(libfwbuilder::FWException)
+bool RCS::co(const QString &rev,bool force)
 {
 /* first check if filename is already in RCS */
 
@@ -693,10 +694,10 @@ bool RCS::co(const QString &rev,bool force) throw(libfwbuilder::FWException)
         stderrBuffer="";
 
         if (fwbdebug) qDebug("starting co with environment '%s'",
-                             rcsenvfix->getEnv()->join("\n").toAscii().constData());
+                             rcsenvfix->getEnv()->join("\n").toLatin1().constData());
         if (fwbdebug) qDebug("executing command '%s %s'",
-                         co_file_name.toAscii().constData(),
-                         arglist.join(" ").toAscii().constData());
+                         co_file_name.toLatin1().constData(),
+                         arglist.join(" ").toLatin1().constData());
 
         proc->setEnvironment(*rcsenvfix->getEnv());
         proc->start( co_file_name, arglist );
@@ -820,10 +821,10 @@ after the program crashed.").arg(locked_rev),
         stderrBuffer="";
 
         if (fwbdebug) qDebug("starting co with environment '%s'",
-                             rcsenvfix->getEnv()->join("\n").toAscii().constData());
+                             rcsenvfix->getEnv()->join("\n").toLatin1().constData());
         if (fwbdebug) qDebug("executing command '%s %s'",
-                         co_file_name.toAscii().constData(),
-                         arglist.join(" ").toAscii().constData());
+                             co_file_name.toLatin1().constData(),
+                             arglist.join(" ").toLatin1().constData());
 
         proc->setEnvironment(*rcsenvfix->getEnv());
         proc->start( co_file_name, arglist );
@@ -857,7 +858,7 @@ after the program crashed.").arg(locked_rev),
 
 
 bool RCS::ci( const QString &_lm,
-              bool unlock) throw(libfwbuilder::FWException)
+              bool unlock)
 {
 /* first check if filename is already in RCS */
     if (!rcs_available || !isInRCS()) return false;
@@ -868,7 +869,7 @@ bool RCS::ci( const QString &_lm,
 
     if (fwbdebug)
         qDebug("RCS::ci  log message (%d characters): '%s'",
-               logmsg.length(), logmsg.toAscii().constData());
+               logmsg.length(), logmsg.toLatin1().constData());
 
     QStringList arglist;
 
@@ -881,7 +882,7 @@ bool RCS::ci( const QString &_lm,
     stderrBuffer="";
 
     if (fwbdebug) qDebug("starting ci with environment '%s'",
-                         rcsenvfix->getEnv()->join("\n").toAscii().constData());
+                         rcsenvfix->getEnv()->join("\n").toLatin1().constData());
 
     QByteArray rcslog = logmsg.toUtf8();
 
@@ -911,7 +912,7 @@ bool RCS::ci( const QString &_lm,
 
         throw( FWException( (obuf+"\n"+
                              arglist.join(" ")+"\n"+
-                             rcsenvfix->getEnv()->join("\n")).toAscii().constData() ) );
+                             rcsenvfix->getEnv()->join("\n")).toLatin1().constData() ) );
     }
 
 /* make a copy, omitting trailing '\0' so it won't get sent to ci */
@@ -958,7 +959,7 @@ bool RCS::ci( const QString &_lm,
  * "-z+09:00" works properly
  *
  */
-QString RCS::rlog() throw(libfwbuilder::FWException)
+QString RCS::rlog()
 {
     if (!rcs_available)
         throw(FWException(QObject::tr("RCS tools are unavailable").toStdString()));
@@ -993,7 +994,7 @@ QString RCS::rlog() throw(libfwbuilder::FWException)
     if (fwbdebug) qDebug("Running rlog: finished reading");
     // Note: we convert rlog comments to Utf8. Local8Bit does not seem
     // to work on windows, produces '????'
-    QString rlogTxt = QString::fromUtf8(stdoutBuffer.toAscii().constData());
+    QString rlogTxt = QString::fromUtf8(stdoutBuffer.toLatin1().constData());
 
     if (proc->state() == QProcess::NotRunning && proc->exitCode()==0)
         return rlogTxt;
@@ -1002,14 +1003,14 @@ QString RCS::rlog() throw(libfwbuilder::FWException)
     throw( FWException( msg.toLatin1().constData() ) );
 }
 
-QStringList RCS::rcsdiff(const QString&) throw(libfwbuilder::FWException)
+QStringList RCS::rcsdiff(const QString&)
 {
     isDiff();
     QString temp = stdoutBuffer;
     return temp.split("\n");
 }
 
-bool RCS::isDiff(const QString &rev) throw(libfwbuilder::FWException)
+bool RCS::isDiff(const QString &rev)
 {
     if (!rcs_available)
         throw(FWException(QObject::tr("RCS tools are unavailable").toStdString()));

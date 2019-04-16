@@ -25,7 +25,6 @@
 
 
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 
@@ -180,8 +179,8 @@ void ObjectEditor::registerObjectDialog(QStackedWidget *stack,
                                         const QString &obj_type,
                                         const QString &dialog_name)
 {
-    BaseObjectDialog *w = qFindChild<BaseObjectDialog*>(stack, dialog_name);
-    if (w==NULL)
+    BaseObjectDialog *w = stack->findChild<BaseObjectDialog*>(dialog_name);
+    if (w==nullptr)
     {
         qDebug() << "Dialog widget missing for the object type "
                  << obj_type
@@ -198,8 +197,8 @@ void ObjectEditor::registerOptDialog(QStackedWidget *stack,
                                      ObjectEditor::OptType opt_type,
                                      const QString &dialog_name)
 {
-    BaseObjectDialog *w = qFindChild<BaseObjectDialog*>(stack, dialog_name);
-    if (w==NULL)
+    BaseObjectDialog *w = stack->findChild<BaseObjectDialog*>(dialog_name);
+    if (w==nullptr)
     {
         qDebug() << "Dialog widget missing for the option "
                  << opt_type
@@ -230,7 +229,7 @@ void ObjectEditor::attachToProjectWindow(ProjectPanel *pp)
 QWidget* ObjectEditor::getCurrentObjectDialog()
 {
     if (current_dialog_idx >= 0) return dialogs[current_dialog_idx];
-    else return NULL;
+    else return nullptr;
 }
 
 QString ObjectEditor::getOptDialogName(OptType t)
@@ -295,7 +294,7 @@ void ObjectEditor::openOpt(FWObject *obj, OptType t)
                      << QString((obj)?obj->getTypeName().c_str():"")
                      << "t=" << t;
 
-        if (Rule::cast(obj)==NULL) return;
+        if (Rule::cast(obj)==nullptr) return;
 
         activateDialog(getOptDialogName(t), obj, t);
     } else
@@ -313,7 +312,7 @@ void ObjectEditor::disconnectSignals()
 void ObjectEditor::purge()
 {
     if (fwbdebug) qDebug("ObjectEditor::purge");
-    activateDialog("BLANK", NULL, optNone);
+    activateDialog("BLANK", nullptr, optNone);
     openedOpt = optNone;
 }
 

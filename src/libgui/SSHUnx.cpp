@@ -25,7 +25,6 @@
 
 
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 
@@ -86,7 +85,7 @@ SSHUnx::SSHUnx(QWidget *_par,
     shell_errors << "error in parsing address";
     shell_errors << "can't set";
     shell_errors << ".* malformed";
-    shell_errors << ".* failed";
+    shell_errors << ".*(?<!PEM_read_PrivateKey) failed";
     shell_errors << ".* not allowed for the AF";
     shell_errors << "internal error";
     shell_errors << "unable to allocate .*";
@@ -124,7 +123,8 @@ bool SSHUnx::checkForErrors(QStringList *errptr)
     if (fwbdebug)
         qDebug(
             QString("SSHUnx::stateMachine:  Checking for errors. Buffer='%1'").
-            arg(stdoutBuffer).toAscii().constData());
+            arg(stdoutBuffer).toLatin1().constData());
+
 #endif
 
     foreach (QString err, *errptr)
@@ -189,7 +189,7 @@ void SSHUnx::stateMachine()
         )
         {
             stdoutBuffer="";
-            proc->write( pwd.toAscii() );
+            proc->write( pwd.toLatin1() );
             proc->write( "\n" );
             break;
         }
@@ -278,7 +278,7 @@ void SSHUnx::stateMachine()
         )
         {
             stdoutBuffer="";
-            proc->write( pwd.toAscii() );
+            proc->write( pwd.toLatin1() );
             proc->write( "\n" );
             break;
         }
@@ -310,7 +310,7 @@ void SSHUnx::stateMachine()
             emit printStdout_sign( "\n");
 
             delete proc;
-            proc=NULL;
+            proc=nullptr;
 
             state=NONE;
 
@@ -323,7 +323,7 @@ void SSHUnx::stateMachine()
 
 //            terminate();
             sessionComplete(true);   // finish with error status
-            proc=NULL;
+            proc=nullptr;
         }
 
         emit sessionFinished_sign();

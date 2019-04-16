@@ -23,7 +23,6 @@
 
 */
 
-#include "../../config.h"
 
 #include <fstream>
 #include <iostream>
@@ -69,6 +68,7 @@
 #include "fwbuilder/StateSyncClusterGroup.h"
 #include "fwbuilder/FailoverClusterGroup.h"
 #include "fwbuilder/Library.h"
+#include "fwbuilder/Constants.h"
 
 #include <QString>
 #include <QStringList>
@@ -79,6 +79,9 @@
 #include <QtDebug>
 #include <QTime>
 
+#ifdef _WIN64
+#define tzname _tzname
+#endif
 
 using namespace std;
 using namespace libfwbuilder;
@@ -112,8 +115,8 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
     // see #2212 Create temporary copy of the firewall and cluster
     // objects and pass them to the compilers.
 
-    Cluster *cluster = NULL;
-    Firewall *fw = NULL;
+    Cluster *cluster = nullptr;
+    Firewall *fw = nullptr;
 
     getFirewallAndClusterObjects(cluster_id, firewall_id, &cluster, &fw);
 
@@ -153,7 +156,7 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
         bool debug=options->getBool("debug");
         QString shell_dbg = (debug)?"set -x":"" ;
 
-        std::auto_ptr<OSConfigurator_linux24> oscnf;
+        std::unique_ptr<OSConfigurator_linux24> oscnf;
 
         string platform_family = Resources::platform_res[platform]->
             getResourceStr("/FWBuilderResources/Target/family");
@@ -169,7 +172,7 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
             epilog_done = true;
         }
 
-        string os_variant = DISTRO;
+        string os_variant = Constants::getDistro();
 
 /* minimal sanity checking */
         if (os_family == "ipcop")
@@ -182,23 +185,24 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
             // in states ESTABLISHED,RELATED
             fw->getOptionsObject()->setBool("accept_established", false);
 
-            oscnf = std::auto_ptr<OSConfigurator_linux24>(
+            oscnf = std::unique_ptr<OSConfigurator_linux24>(
                 new OSConfigurator_ipcop(objdb , fw, false));
         }
 
         if (os_family == "linux24" ||
+            os_family == "linux317" ||
             os_family == "openwrt" ||
             os_family == "dd-wrt-nvram" ||
             os_family == "dd-wrt-jffs" ||
             os_family == "sveasoft")
-            oscnf = std::auto_ptr<OSConfigurator_linux24>(
+            oscnf = std::unique_ptr<OSConfigurator_linux24>(
                 new OSConfigurator_linux24(objdb , fw, false));
 
         if (os_family == "secuwall")
-            oscnf = std::auto_ptr<OSConfigurator_linux24>(
+            oscnf = std::unique_ptr<OSConfigurator_linux24>(
                 new OSConfigurator_secuwall(objdb , fw, false));
 
-        if (oscnf.get()==NULL)
+        if (oscnf.get()==nullptr)
         {
             abort("Unrecognized host OS " + fw->getStr("host_OS") +
                   "  (family " + os_family+")");
@@ -329,7 +333,7 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
 
             // First, process branch NAT rulesets, then top NAT ruleset
 
-            NAT *top_nat = NULL;
+            NAT *top_nat = nullptr;
             for (list<FWObject*>::iterator p=all_nat.begin();
                  p!=all_nat.end(); ++p)
             {
@@ -415,7 +419,7 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
                 generated_script += "\n\n";
         }
 
-        std::auto_ptr<RoutingCompiler_ipt> routing_compiler(
+        std::unique_ptr<RoutingCompiler_ipt> routing_compiler(
             new RoutingCompiler_ipt(objdb, fw, false, oscnf.get()));
 
         RuleSet *routing = RuleSet::cast(fw->getFirstByType(Routing::TYPENAME));
@@ -474,11 +478,11 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
  * now write generated scripts to files
  */
 
-        char *timestr = NULL;
+        char *timestr = nullptr;
         time_t tm;
         struct tm *stm;
 
-        tm = time(NULL);
+        tm = time(nullptr);
         stm = localtime(&tm);
         timestr = strdup(ctime(&tm));
         timestr[strlen(timestr)-1] = '\0';
@@ -678,13 +682,18 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
         script_buffer = "";
 
         Configlet block_action(fw, "linux24", "block_action");
+        if (XMLTools::version_compare(fw_version, "1.4.20") >= 0)
+            block_action.setVariable("opt_wait", "-w");
+        else
+            block_action.setVariable("opt_wait", "");
+
         block_action.collapseEmptyStrings(true);
 
         // the name of the option is historical (including the typo)
         if (fw->getOptionsObject()->getBool("add_mgmt_ssh_rule_when_stoped"))
         {
-            std::auto_ptr<PolicyCompiler_ipt> policy_compiler =
-                createPolicyCompiler(fw, false, NULL,  NULL);
+            std::unique_ptr<PolicyCompiler_ipt> policy_compiler =
+                createPolicyCompiler(fw, false, nullptr,  nullptr);
             PolicyCompiler_ipt::PrintRule* print_rule =
                 policy_compiler->createPrintRuleProcessor();
             print_rule->setContext(policy_compiler.get());
@@ -701,6 +710,11 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
         stop_action.collapseEmptyStrings(true);
         stop_action.setVariable("have_ipv4", have_ipv4);
         stop_action.setVariable("have_ipv6", have_ipv6);
+
+        if (XMLTools::version_compare(fw_version, "1.4.20") >= 0)
+            stop_action.setVariable("opt_wait", "-w");
+        else
+            stop_action.setVariable("opt_wait", "");
 
         script_skeleton.setVariable("stop_action", stop_action.expand());
 
@@ -723,7 +737,7 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
                                  QStringList("script_name_on_firewall"));
 
         script_buffer = "";
-        script << MANIFEST_MARKER
+        script << manifestMarker()
                << "* "
                << this->escapeFileName(file_names[FW_FILE]);
 
@@ -745,7 +759,7 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
             {
                 string name = c_iter->first;
                 string dest = c_iter->second;
-                script << MANIFEST_MARKER << this->escapeFileName(name.c_str());
+                script << manifestMarker() << this->escapeFileName(name.c_str());
                 if (!dest.empty()) script << " " << dest;
                 script << "\n";
             }
@@ -784,6 +798,10 @@ QString CompilerDriver_ipt::run(const std::string &cluster_id,
         }
 
         free(timestr);
+
+        if (!all_errors.isEmpty())
+            status = BaseCompiler::FWCOMPILER_WARNING;
+
     }
     catch (FWException &ex)
     {

@@ -25,9 +25,7 @@
 */
 
 
-#include "../../config.h"
 #include "global.h"
-#include "VERSION.h"
 
 #include <QDir>
 #include <QString>
@@ -65,7 +63,7 @@ static OSErr checkAppleEventForMissingParams(const AppleEvent&
 }
 
 static pascal OSErr odocHandler(const AppleEvent* inEvent, AppleEvent*  
-                                /*reply*/, long /*refCon*/)
+                                /*reply*/, SRefCon /*refCon*/)
 {
     if (fwbdebug) qDebug("Handling 'odoc'\n");
     AEDescList documentList;

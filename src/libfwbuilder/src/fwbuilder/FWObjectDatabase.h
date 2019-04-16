@@ -29,7 +29,6 @@
 
 #include "fwbuilder/FWObject.h"
 #include "fwbuilder/FWException.h"
-#include "fwbuilder/ThreadTools.h"
 #include "fwbuilder/XMLTools.h"
 
 #ifdef _WIN32
@@ -230,7 +229,7 @@ private:
             libfwbuilder::Group *g,
             std::set<libfwbuilder::FWObject *> &res);
         Firewall* _findFirewallByNameRecursive(
-            FWObject* db, const std::string &name) throw(FWException);
+            FWObject* db, const std::string &name);
         FWObject* _recursively_copy_subtree(FWObject *target,
                                             FWObject *source,
                                             std::map<int,int> &id_map,
@@ -271,7 +270,10 @@ public:
               STANDARD_LIB_ID = 4,
               USER_LIB_ID = 5,
               TEMPLATE_LIB_ID = 6,
-              DELETED_OBJECTS_ID = 7
+              DELETED_OBJECTS_ID = 7,
+              DUMMY_ADDRESS_ID = 8,
+              DUMMY_SERVICE_ID = 9,
+              DUMMY_INTERFACE_ID = 10
         } standard_ids;
 
         static void registerObjectType(const std::string &type_name,
@@ -349,22 +351,22 @@ public:
 
         // --- XML import/export ---
     
-        virtual void fromXML(xmlNodePtr xml_parent_node) throw(FWException);
-        virtual xmlNodePtr toXML(xmlNodePtr parent) throw(FWException);
+        virtual void fromXML(xmlNodePtr xml_parent_node);
+        virtual xmlNodePtr toXML(xmlNodePtr parent);
     
         time_t getTimeLastModified() { return lastModified; }
         void resetTimeLastModified(time_t t) { lastModified=t; }
 
         // --- Load/Save ---
     
-        virtual void saveFile(const std::string &filename) throw(FWException); 
-        virtual void saveToBuffer(xmlChar **buffer,int *size) throw(FWException);
+        virtual void saveFile(const std::string &filename);
+        virtual void saveToBuffer(xmlChar **buffer,int *size);
         virtual void load( const std::string &filename,
                            XMLTools::UpgradePredicate *upgrade,
-                           const std::string &template_dir) throw(FWException);
+                           const std::string &template_dir);
         virtual void setDirty(bool f);
 
-        Firewall* findFirewallByName(const std::string &name) throw(FWException);
+        Firewall* findFirewallByName(const std::string &name);
 
         FWObjectDatabase* exportSubtree( FWObject *lib );
         FWObjectDatabase* exportSubtree( const std::list<FWObject*> &libs );
@@ -401,7 +403,7 @@ public:
          * tree is duplicated
          */
         virtual FWObject& duplicate(const FWObject *obj,
-                                    bool preserve_id = true) throw(FWException);
+                                    bool preserve_id = true);
 
         
         void recursivelyRemoveObjFromTree(FWObject* obj, bool remove_ref=false);
@@ -445,7 +447,7 @@ public:
             }
         };
 
-        void merge(FWObjectDatabase *ndb, ConflictResolutionPredicate *mp=NULL);
+        void merge(FWObjectDatabase *ndb, ConflictResolutionPredicate *mp=nullptr);
         void findDuplicateIds(FWObjectDatabase *ndb, std::set<int> &dupids);
         
         void setFileName(const std::string &filename);

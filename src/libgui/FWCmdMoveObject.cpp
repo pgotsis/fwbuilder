@@ -34,6 +34,7 @@
 #include "fwbuilder/Firewall.h"
 #include "fwbuilder/RuleSet.h"
 #include "fwbuilder/Library.h"
+#include "fwbuilder/RuleElement.h"
 
 #include <QObject>
 #include <QtDebug>
@@ -74,7 +75,7 @@ FWCmdMoveObject::FWCmdMoveObject(
 {
     old_parent = old_p;
     new_parent = new_p;
-    current_parent = NULL;
+    current_parent = nullptr;
     obj = o;
 
     if (text.isEmpty())
@@ -92,6 +93,11 @@ FWCmdMoveObject::~FWCmdMoveObject()
 
 void FWCmdMoveObject::undo()
 {
+    FWObject *dummySource = new_parent->getRoot()->findInIndex(FWObjectDatabase::DUMMY_ADDRESS_ID);
+    FWObject *dummyDestination = dummySource;
+    FWObject *dummyService = new_parent->getRoot()->findInIndex(FWObjectDatabase::DUMMY_SERVICE_ID);
+    FWObject *dummyInterface = new_parent->getRoot()->findInIndex(FWObjectDatabase::DUMMY_INTERFACE_ID);
+
     obj->setStr("folder", oldUserFolder.toUtf8().constData());
     if (new_parent->hasChild(obj) && !old_parent->hasChild(obj))
     {
@@ -111,7 +117,28 @@ void FWCmdMoveObject::undo()
             foreach(FWObject *o, it->second)
             {
                 FWObject *cobj = project->db()->findInIndex(obj_id);
+
+                if (RuleElement::cast(o)) {
+                    setDiffType(Rule::cast(o->getParent()), DiffType::Edit);
+                    if ( (o->getChildrenCount() == 1)) {
+                        if (RuleElementSrc::cast(o) && st->getInt("Objects/PolicyRule/defaultSource")) {
+                            o->removeRef(dummySource);
+
+                        } else if (RuleElementDst::cast(o) && st->getInt("Objects/PolicyRule/defaultDestination")) {
+                            o->removeRef(dummyDestination);
+
+                        } else if (RuleElementSrv::cast(o) && st->getInt("Objects/PolicyRule/defaultService")) {
+                            o->removeRef(dummyService);
+
+                        } else if (RuleElementItf::cast(o) && st->getInt("Objects/PolicyRule/defaultInterface")) {
+                            o->removeRef(dummyInterface);
+                        }
+                    }
+                }
+
                 if (cobj) o->addRef(cobj);
+                if (RuleElement::cast(o))
+                    resetDiffType(Rule::cast(o->getParent()));
             }
         }
     }
@@ -134,6 +161,11 @@ void FWCmdMoveObject::redo()
                            << obj->getRefCounter();
     if (reference_holders.size())
     {
+        FWObject *dummySource = new_parent->getRoot()->findInIndex(FWObjectDatabase::DUMMY_ADDRESS_ID);
+        FWObject *dummyDestination = dummySource;
+        FWObject *dummyService = new_parent->getRoot()->findInIndex(FWObjectDatabase::DUMMY_SERVICE_ID);
+        FWObject *dummyInterface = new_parent->getRoot()->findInIndex(FWObjectDatabase::DUMMY_INTERFACE_ID);
+
         map<int, set<FWObject*> >::iterator it;
         for (it=reference_holders.begin(); it!=reference_holders.end(); ++it)
         {
@@ -142,6 +174,49 @@ void FWCmdMoveObject::redo()
             {
                 FWObject *cobj = project->db()->findInIndex(obj_id);
                 if (cobj) o->removeRef(cobj);
+                if (RuleElement::cast(o)) {
+                    setDiffType(Rule::cast(o->getParent()), DiffType::Edit);
+                    if ( (o->getChildrenCount() == 1)) {
+                        FWObject *anyobj = FWObjectReference::getObject(*o->begin());
+
+                        if (RuleElementSrc::cast(o) && st->getInt("Objects/PolicyRule/defaultSource")) {
+                            if (!Address::cast(anyobj)->isAny())
+                                continue;
+
+                            if (!dummySource || (new_parent->getRoot()->getStringId(dummySource->getId()) != "dummyaddressid0"))
+                                continue;
+
+                            o->addRef(dummySource);
+
+                        } else if (RuleElementDst::cast(o) && st->getInt("Objects/PolicyRule/defaultDestination")) {
+                            if (!Address::cast(anyobj)->isAny())
+                                continue;
+
+                            if (!dummyDestination || (new_parent->getRoot()->getStringId(dummyDestination->getId()) != "dummyaddressid0"))
+                                continue;
+
+                            o->addRef(dummyDestination);
+
+                        } else if (RuleElementSrv::cast(o) && st->getInt("Objects/PolicyRule/defaultService")) {
+                            if (!Service::cast(anyobj)->isAny())
+                                continue;
+
+                            if (!dummyService || (new_parent->getRoot()->getStringId(dummyService->getId()) != "dummyserviceid0"))
+                                continue;
+
+                            o->addRef(dummyService);
+
+                        } else if (RuleElementItf::cast(o) && st->getInt("Objects/PolicyRule/defaultInterface")) {
+                            if (!Address::cast(anyobj)->isAny())
+                                continue;
+
+                            if (!dummyInterface || (new_parent->getRoot()->getStringId(dummyInterface->getId()) != "dummyinterfaceid0"))
+                                continue;
+
+                            o->addRef(dummyInterface);
+                        }
+                    }
+                }
             }
         }
     }
@@ -183,7 +258,7 @@ void FWCmdMoveObject::notify()
     QCoreApplication::postEvent(
         mw, new dataModifiedEvent(filename, new_parent->getId()));
 
-    FWObject *new_obj = NULL;
+    FWObject *new_obj = nullptr;
     if (current_parent->getId()==FWObjectDatabase::DELETED_OBJECTS_ID)
     {
         if (Library::isA(obj))
@@ -202,13 +277,13 @@ void FWCmdMoveObject::notify()
             {
 //                new_obj = old_parent;  // this does not work!
                 new_obj = project->m_panel->om->getNextUserLib(obj);
-                if (new_obj == NULL)
+                if (new_obj == nullptr)
                 {
                     // no user libraries left, show "Standard"
                     new_obj = old_parent->getRoot()->findInIndex(
                         FWObjectDatabase::getIntId("syslib000"));
                 }
-                if (new_obj == NULL)
+                if (new_obj == nullptr)
                     new_obj = old_parent->getRoot()->front();
                 if (fwbdebug) qDebug() << "FWCmdMoveObject::notify() new_obj="
                                        << new_obj;

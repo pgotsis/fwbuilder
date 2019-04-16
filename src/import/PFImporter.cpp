@@ -21,7 +21,6 @@
 
 */
 
-#include "../../config.h"
 
 #include "PFImporter.h"
 
@@ -468,7 +467,7 @@ void PFImporter::convertTcpFlags(QList<int> &flags_list,
 {
     for (int i=0; i<flags_str.size(); ++i)
     {
-        switch (flags_str.at(i).toAscii())
+        switch (flags_str.at(i).toLatin1())
         {
         case 'U': flags_list << TCPService::URG; break;
         case 'A': flags_list << TCPService::ACK; break;
@@ -488,7 +487,7 @@ void PFImporter::convertTcpFlags(QList<int> &flags_list,
 
 FWObject* PFImporter::makeAddressObj(AddressSpec &as)
 {
-    if (as.at == AddressSpec::ANY) return NULL;
+    if (as.at == AddressSpec::ANY) return nullptr;
 
     if (as.at == AddressSpec::INTERFACE_OR_HOST_NAME)
     {
@@ -498,7 +497,7 @@ FWObject* PFImporter::makeAddressObj(AddressSpec &as)
         if (int_prop->looksLikeInterface(as.address.c_str()))
         {
             Interface *intf = getInterfaceByName(as.address);
-            if (intf == NULL)
+            if (intf == nullptr)
             {
                 // this interface was never used in "on <intf>" clause before
                 newInterface(as.address);
@@ -533,7 +532,7 @@ FWObject* PFImporter::makeAddressObj(AddressSpec &as)
     if (as.at == AddressSpec::INTERFACE_NETWORK)
     {
         Interface *intf = getInterfaceByName(as.address);
-        if (intf == NULL)
+        if (intf == nullptr)
         {
             // this interface was never used in "on <intf>" clause before
             newInterface(as.address);
@@ -541,7 +540,7 @@ FWObject* PFImporter::makeAddressObj(AddressSpec &as)
         }
 
         FWObject *o = intf->getFirstByType(AttachedNetworks::TYPENAME);
-        if ( o != NULL )
+        if ( o != nullptr )
         {
             return o;
         } else {
@@ -561,7 +560,7 @@ FWObject* PFImporter::makeAddressObj(AddressSpec &as)
     {
         error_tracker->registerError(
             QObject::tr("import of 'interface:broadcast' is not supported."));
-        return NULL;
+        return nullptr;
     }
 
     if (as.at == AddressSpec::HOST_ADDRESS)
@@ -581,7 +580,7 @@ FWObject* PFImporter::makeAddressObj(AddressSpec &as)
             error_tracker->registerError(
                 QObject::tr("Warning: matching '%1' is not supported")
                 .arg(as.address.c_str()));
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -595,7 +594,7 @@ FWObject* PFImporter::makeAddressObj(AddressSpec &as)
         return at;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 void PFImporter::addLogging()
@@ -668,7 +667,7 @@ void PFImporter::pushRule()
     else
         pushNATRule();
 
-    assert(current_rule!=NULL);
+    assert(current_rule!=nullptr);
 
     if (error_tracker->hasWarnings())
     {
@@ -693,7 +692,7 @@ void PFImporter::pushRule()
         markCurrentRuleBad();
     }
 
-    current_rule = NULL;
+    current_rule = nullptr;
     rule_comment = "";
 
     clear();
@@ -709,7 +708,7 @@ void PFImporter::pushPolicyRule()
     // base class uses dictionary all_rulesets to do some checks (e.g.
     // countRules()) so we'll create one dummy UnidirectionalRuleSet object
     string ruleset_name = ruleset->getName();
-    if (checkUnidirRuleSet(ruleset_name) == NULL)
+    if (checkUnidirRuleSet(ruleset_name) == nullptr)
     {
         UnidirectionalRuleSet *rs = new UnidirectionalRuleSet();
         rs->name = ruleset_name;
@@ -717,7 +716,7 @@ void PFImporter::pushPolicyRule()
         all_rulesets[ruleset_name] = rs;
     }
 
-    assert(current_rule!=NULL);
+    assert(current_rule!=nullptr);
     // populate all elements of the rule
 
     // Note that standard function
@@ -735,7 +734,7 @@ void PFImporter::pushPolicyRule()
     PolicyRule *rule = PolicyRule::cast(current_rule);
 
     FWOptions  *ropt = current_rule->getOptionsObject();
-    assert(ropt!=NULL);
+    assert(ropt!=nullptr);
 
     if (action=="pass")
     {
@@ -812,7 +811,7 @@ void PFImporter::pushPolicyRule()
     for (it=iface_group.begin(); it!=iface_group.end(); ++it)
     {
         Interface *intf = getInterfaceByName(it->name);
-        assert(intf!=NULL);
+        assert(intf!=nullptr);
         RuleElement *re =rule->getItf();
         re->addRef(intf);
         if (it->neg) re->setNeg(true);
@@ -854,7 +853,7 @@ void PFImporter::pushPolicyRule()
         sig.type_name = TagService::TYPENAME;
         sig.tag = tag.c_str();
         FWObject *tobj = commitObject(service_maker->createObject(sig));
-        rule->setTagging(tobj != NULL);
+        rule->setTagging(tobj != nullptr);
         rule->setTagObject(tobj);
     }
 
@@ -912,7 +911,7 @@ void PFImporter::pushPolicyRule()
             RouteSpec &rs = *it;
 
             Interface *intf = getInterfaceByName(rs.iface);
-            if (intf == NULL)
+            if (intf == nullptr)
             {
                 // this interface was never used in "on <intf>" clause before
                 intf = newInterface(rs.iface);
@@ -991,7 +990,7 @@ void PFImporter::pushNATRule()
     // base class uses dictionary all_rulesets to do some checks (e.g.
     // countRules()) so we'll create one dummy UnidirectionalRuleSet object
     string ruleset_name = ruleset->getName();
-    if (checkUnidirRuleSet(ruleset_name) == NULL)
+    if (checkUnidirRuleSet(ruleset_name) == nullptr)
     {
         UnidirectionalRuleSet *rs = new UnidirectionalRuleSet();
         rs->name = ruleset_name;
@@ -999,7 +998,7 @@ void PFImporter::pushNATRule()
         all_rulesets[ruleset_name] = rs;
     }
 
-    assert(current_rule!=NULL);
+    assert(current_rule!=nullptr);
 
     QString message_str = 
         QString("nat rule: action %1; interfaces: %2");
@@ -1007,7 +1006,7 @@ void PFImporter::pushNATRule()
     NATRule *rule = NATRule::cast(current_rule);
 
     FWOptions  *ropt = current_rule->getOptionsObject();
-    assert(ropt!=NULL);
+    assert(ropt!=nullptr);
 
     if (action=="nat")   rule->setRuleType(NATRule::SNAT);
     if (action=="rdr")   rule->setRuleType(NATRule::DNAT);
@@ -1022,7 +1021,7 @@ void PFImporter::pushNATRule()
     for (it=iface_group.begin(); it!=iface_group.end(); ++it)
     {
         Interface *intf = getInterfaceByName(it->name);
-        assert(intf!=NULL);
+        assert(intf!=nullptr);
         RuleElement *re =rule->getItfOutb();
         re->addRef(intf);
         if (it->neg) re->setNeg(true);
@@ -1301,7 +1300,7 @@ Firewall* PFImporter::finalize()
                 if (int_prop->looksLikeInterface(skip_interface_name.c_str()))
                 {
                     Interface *intf = getInterfaceByName(skip_interface_name);
-                    if (intf == NULL)
+                    if (intf == nullptr)
                     {
                         // this interface was never used in "on
                         // <intf>" clause before
@@ -1378,7 +1377,7 @@ Firewall* PFImporter::finalize()
     }
     else
     {
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -1393,7 +1392,7 @@ Interface* PFImporter::getInterfaceByName(const string &name)
             return intf;
         }
     }
-    return NULL;
+    return nullptr;
 }
     
 void PFImporter::newAddressTableObject(const string &name, const string &file)
@@ -1438,7 +1437,7 @@ void PFImporter::newAddressTableObject(const string &name,
     ObjectMaker maker(Library::cast(library), error_tracker);
     FWObject *og =
         commitObject(maker.createObject(ObjectGroup::TYPENAME, name.c_str()));
-    assert(og!=NULL);
+    assert(og!=nullptr);
     address_table_registry[name.c_str()] = og;
 
     if (has_negations)

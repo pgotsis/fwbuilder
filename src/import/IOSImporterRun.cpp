@@ -23,12 +23,12 @@
 
 */
 
-#include "../../config.h"
 
 // #include "global.h"
 
 #include "IOSImporter.h"
 
+#include <QObject>
 #include <QString>
 #include <QStringList>
 

@@ -25,7 +25,6 @@
 
 
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 
@@ -127,13 +126,13 @@ SSHCisco::~SSHCisco()
 
 QString SSHCisco::cmd(QProcess*, const QString &cmd)
 {
-    if (fwbdebug) qDebug("Command '%s'", cmd.toAscii().constData());
+    if (fwbdebug) qDebug("Command '%s'", cmd.toLatin1().constData());
     sendCommand(cmd);
     //stdoutBuffer = "";
-    //proc->write( (cmd + "\n").toAscii() );
+    //proc->write( (cmd + "\n").toLatin1() );
     state = EXECUTING_COMMAND;
     local_event_loop->exec();
-    if (fwbdebug) qDebug("Command '%s' completed", cmd.toAscii().constData());
+    if (fwbdebug) qDebug("Command '%s' completed", cmd.toLatin1().constData());
     return stdoutBuffer;
 }
 
@@ -196,7 +195,7 @@ void SSHCisco::stateMachine()
              cmpPrompt(stdoutBuffer,QRegExp(pwd_prompt_2)) )
         {
             stdoutBuffer="";
-            proc->write( (pwd + "\n").toAscii() );
+            proc->write( (pwd + "\n").toLatin1() );
             break;
         }
 
@@ -272,7 +271,7 @@ void SSHCisco::stateMachine()
         if ( cmpPrompt(stdoutBuffer,QRegExp(epwd_prompt)) )
         {
             stdoutBuffer="";
-            if (!epwd.isEmpty()) proc->write( (epwd + "\n").toAscii() );
+            if (!epwd.isEmpty()) proc->write( (epwd + "\n").toLatin1() );
             else                 proc->write( "\n" );
             state=WAITING_FOR_ENABLE;
         }
@@ -282,7 +281,7 @@ void SSHCisco::stateMachine()
         if ( cmpPrompt(stdoutBuffer,QRegExp(epwd_prompt)) )
         {
             stdoutBuffer="";
-            if (!epwd.isEmpty()) proc->write( (epwd + "\n").toAscii() );
+            if (!epwd.isEmpty()) proc->write( (epwd + "\n").toLatin1() );
             else                 proc->write( "\n" );
             state=WAITING_FOR_ENABLE;
             break;
@@ -301,7 +300,7 @@ void SSHCisco::stateMachine()
             stateMachine();
             break;
         }
-
+    /* FALLTHRU */
     case ENABLE:
         if ( cmpPrompt(stdoutBuffer, QRegExp(enable_prompt)) )
         {
@@ -312,7 +311,7 @@ void SSHCisco::stateMachine()
                 pre_config_commands.pop_front();
                 if (cmd.indexOf("reload in")!=-1) state = SCHEDULE_RELOAD_DIALOG;
                 sendCommand(cmd);
-                //proc->write( (cmd + "\n").toAscii() );
+                //proc->write( (cmd + "\n").toLatin1() );
                 break;
             }
 
@@ -402,8 +401,8 @@ void SSHCisco::stateMachine()
             // see SF bug 2973136 , fwbuilder bug #1347
             // looks like if user hits Cancel to cancel install at just right
             // moment, the process can get killed when control is already
-            // inside this block. Adding test for proc != NULL to be sure.
-            if ( activation_commands.size() != 0 && proc != NULL)
+            // inside this block. Adding test for proc != nullptr to be sure.
+            if ( activation_commands.size() != 0 && proc != nullptr)
             {
                 QString s;
 

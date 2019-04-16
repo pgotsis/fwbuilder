@@ -7,6 +7,11 @@
   Author:  Vadim Zaliva lord@crocodile.org
            Vadim Kurland vadim@fwbuilder.org
 
+
+                 Copyright (C) 2013 UNINETT AS
+
+  Author:  Sirius Bakke <sirius.bakke@uninett.no>
+
   $Id$
 
   This program is free software which we release under the GNU General Public
@@ -24,8 +29,6 @@
 
 */
 
-#include "config.h"
-#include "fwbuilder/libfwbuilder-config.h"
 
 
 #include <sys/types.h>
@@ -270,12 +273,12 @@ void FWObjectDatabase::init_create_methods_table()
 FWObject *FWObjectDatabase::create(const string &type_name, int id, bool init)
 {
     create_function_ptr fn = create_methods[type_name];
-    if (fn == NULL)
+    if (fn == nullptr)
     {
         const char *type_name_cptr = type_name.c_str();
         FWObject   *nobj;
 
-        if (strcmp("comment", type_name_cptr)==SAME) return NULL;
+        if (strcmp("comment", type_name_cptr)==SAME) return nullptr;
         if (strcmp("SelectionCriteria", type_name_cptr) == 0) return 0;
 
         if (strcmp("AnyNetwork", type_name_cptr)==SAME)
@@ -305,9 +308,36 @@ FWObject *FWObjectDatabase::create(const string &type_name, int id, bool init)
             return nobj;
         }
 
+        if (strcmp("DummyNetwork", type_name_cptr)==SAME)
+        {
+            nobj = new Network();
+            if (id > -1) nobj->setId(id);
+            nobj->setXMLName("DummyNetwork");
+            addToIndex(nobj);
+            return nobj;
+        }
+
+        if (strcmp("DummyIPService", type_name_cptr)==SAME)
+        {
+            nobj = new IPService();
+            if (id > -1) nobj->setId(id);
+            nobj->setXMLName("DummyIPService");
+            addToIndex(nobj);
+            return nobj;
+        }
+
+        if (strcmp("DummyInterface", type_name_cptr)==SAME)
+        {
+            nobj = new Interface();
+            if (id > -1) nobj->setId(id);
+            nobj->setXMLName("DummyInterface");
+            addToIndex(nobj);
+            return nobj;
+        }
+
         cerr << "Do not have method to create object of type "
              << type_name << endl;
-        return NULL;
+        return nullptr;
     }
 
     FWObject *nobj = (*fn)(id);
@@ -323,15 +353,15 @@ FWObject *FWObjectDatabase::createFromXML(xmlNodePtr data)
     string typen;
     int id = -1;
 
-    n = FROMXMLCAST(data->name);
-    if (!n) return NULL;
+    n = XMLTools::FromXmlCast(data->name);
+    if (!n) return nullptr;
     typen = n;
 
-    n = FROMXMLCAST(xmlGetProp(data, TOXMLCAST("id")));
+    n = XMLTools::FromXmlCast(xmlGetProp(data, XMLTools::ToXmlCast("id")));
     if (n)
     {
         id = registerStringId(n);
-        FREEXMLBUFF(n);
+        XMLTools::FreeXmlBuff(n);
     }
 
 // create new object but do not prepopulate objects that

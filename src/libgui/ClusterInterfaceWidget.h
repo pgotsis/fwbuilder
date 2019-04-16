@@ -26,9 +26,11 @@
 #ifndef CLUSTERINTERFACEWIDGET_H
 #define CLUSTERINTERFACEWIDGET_H
 
-#include <QtGui/QWidget>
-#include <QtGui/QLabel>
-#include <QtGui/QTreeWidget>
+#include <qglobal.h>
+
+#include <QtWidgets/QWidget>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QTreeWidget>
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QHeaderView>

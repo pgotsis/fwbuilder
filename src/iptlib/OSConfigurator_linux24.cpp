@@ -24,7 +24,6 @@
 */
 
 
-#include "config.h"
 
 #include "OSConfigurator_linux24.h"
 
@@ -211,7 +210,7 @@ void OSConfigurator_linux24::addVirtualAddressForNAT(const Network *nw)
                  *(nw->getAddressPtr())) == virtual_addresses.end())
         {
             Interface *iface = findInterfaceFor( nw, fw );
-            if (iface!=NULL)
+            if (iface!=nullptr)
             {
                 const InetAddr *addr = nw->getAddressPtr();
                 InetAddr first, last;
@@ -254,10 +253,10 @@ void OSConfigurator_linux24::addVirtualAddressForNAT(const Address *addr)
                  virtual_addresses.end(), *addr_addr) == virtual_addresses.end())
         {
             FWObject *vaddr = findAddressFor(addr, fw );
-            if (vaddr!=NULL)
+            if (vaddr!=nullptr)
             {
                 Interface *iface = Interface::cast(vaddr->getParent());
-                assert(iface!=NULL);
+                assert(iface!=nullptr);
 
                 QStringList addresses;
                 const InetAddr *vaddr_netm =
@@ -309,6 +308,7 @@ string OSConfigurator_linux24::printShellFunctions(bool have_ipv6)
     QStringList output;
     FWOptions* options = fw->getOptionsObject();
 
+    string version = fw->getStr("version");
     // string host_os = fw->getStr("host_OS");
     // string os_family = Resources::os_res[host_os]->
     //     getResourceStr("/FWBuilderResources/Target/family");
@@ -359,6 +359,11 @@ string OSConfigurator_linux24::printShellFunctions(bool have_ipv6)
      * default policy
      */
     Configlet reset_iptables(fw, "linux24", "reset_iptables");
+    if (XMLTools::version_compare(version, "1.4.20") >= 0)
+        reset_iptables.setVariable("opt_wait", "-w");
+    else
+        reset_iptables.setVariable("opt_wait", "");
+
     output.push_back(reset_iptables.expand());
 
     Configlet addr_conf(fw, "linux24", "update_addresses");
@@ -416,7 +421,7 @@ string OSConfigurator_linux24::printRunTimeAddressTablesCode()
     return conf.expand().toStdString();
 }
 
-string OSConfigurator_linux24::getPathForATool(const std::string &os_variant, OSData::tools tool_name)
+string OSConfigurator_linux24::getPathForATool(const std::string &os_variant, OSData_ipt::tools tool_name)
 {
     FWOptions* options = fw->getOptionsObject();
     string attr = os_data.getAttributeNameForTool(tool_name);
@@ -439,9 +444,9 @@ string  OSConfigurator_linux24::printPathForAllTools(const string &os)
     list<int>::const_iterator i;
     const list<int> &all_tools = os_data.getAllTools(); 
     for (i=all_tools.begin(); i!=all_tools.end(); ++i)
-        res << os_data.getVariableName(OSData::tools(*i))
+        res << os_data.getVariableName(OSData_ipt::tools(*i))
             << "=\""
-            << getPathForATool(os, OSData::tools(*i))
+            << getPathForATool(os, OSData_ipt::tools(*i))
             << "\""
             << endl;
     return res.str();

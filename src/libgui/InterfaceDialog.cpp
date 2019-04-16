@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 
@@ -82,7 +81,7 @@ InterfaceDialog::InterfaceDialog(QWidget *parent) :
     seclevel->hide();    seclevelLabel->hide();
     netzone->hide();     netzoneLabel->hide();
 */
-    obj=NULL;
+    obj=nullptr;
 
     connectSignalsOfAllWidgetsToSlotChange();
 }
@@ -97,7 +96,7 @@ void InterfaceDialog::loadFWObject(FWObject *o)
 {
     obj=o;
     Interface *s = dynamic_cast<Interface*>(obj);
-    assert(s!=NULL);
+    assert(s!=nullptr);
 
     init = true;
 
@@ -122,7 +121,7 @@ void InterfaceDialog::loadFWObject(FWObject *o)
         FWObject *parent_host = Host::getParentHost(s);
         if (parent_host)
         {
-            // parent_host may be NULL if interface object is located
+            // parent_host may be nullptr if interface object is located
             // in the Deleted Objects library
             interfaceProperties *int_prop =
                 interfacePropertiesObjectFactory::getInterfacePropertiesObject(
@@ -346,7 +345,7 @@ void InterfaceDialog::validate(bool *res)
              Interface::cast(obj), obj_name, err))
     {
         *res = false;
-        if (QApplication::focusWidget() != NULL)
+        if (QApplication::focusWidget() != nullptr)
         {
             blockSignals(true);
             QMessageBox::critical(
@@ -380,7 +379,7 @@ void InterfaceDialog::validate(bool *res)
          */
         *res = false;
         // show warning dialog only if app has focus
-        if (QApplication::focusWidget() != NULL)
+        if (QApplication::focusWidget() != nullptr)
         {
             blockSignals(true);
             QMessageBox::critical(
@@ -431,12 +430,12 @@ void InterfaceDialog::applyChanges()
         blockSignals(false);
     }
 
-    std::auto_ptr<FWCmdChange> cmd(
+    std::unique_ptr<FWCmdChange> cmd(
         new FWCmdChange(m_project, obj, "", autorename_children));
     FWObject* new_state = cmd->getNewState();
 
     Interface *intf = Interface::cast(new_state);
-    assert(intf!=NULL);
+    assert(intf!=nullptr);
 
     string oldname = obj->getName();
     string oldlabel = intf->getLabel();
@@ -527,9 +526,9 @@ void InterfaceDialog::openIfaceDialog()
     try
     {
         QWidget *w = DialogFactory::createIfaceDialog(this, obj);
-        if (w==NULL)   return;   // some dialogs may not be implemented yet
+        if (w==nullptr)   return;   // some dialogs may not be implemented yet
         QDialog *d=dynamic_cast<QDialog*>(w);
-        assert(d!=NULL);
+        assert(d!=nullptr);
         d->exec();
         delete w;
     }

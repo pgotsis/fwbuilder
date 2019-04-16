@@ -6,6 +6,11 @@
 
   Author:  Vadim Kurland     vadim@fwbuilder.org
 
+
+                 Copyright (C) 2013 UNINETT AS
+
+  Author:  Sirius Bakke <sirius.bakke@uninett.no>
+
   $Id$
 
   This program is free software which we release under the GNU General Public
@@ -23,7 +28,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
@@ -138,8 +142,8 @@ QTreeWidgetItem* instDialog::createTreeItem(QTreeWidgetItem* parent,
     item->setData(0, Qt::UserRole, QVariant(fw->getId()));
 
     // Mark cluster members
-    // If parent!=NULL, new tree item corresponds to the cluster member
-    item->setData(1, Qt::UserRole, QVariant(parent!=NULL));
+    // If parent!=nullptr, new tree item corresponds to the cluster member
+    item->setData(1, Qt::UserRole, QVariant(parent!=nullptr));
 
     // it is useful to know how many members does this cluster have. If this is
     // not a cluster, store 0
@@ -192,8 +196,8 @@ void instDialog::setFlags(QTreeWidgetItem* item)
     bool install_only_on_primary_member = Resources::getTargetCapabilityBool(
         platform, "install_only_on_primary");
 
-    Cluster *cluster = NULL;
-    FWObject *master_interface = NULL;
+    Cluster *cluster = nullptr;
+    FWObject *master_interface = nullptr;
 
     if (parent)
     {
@@ -246,7 +250,7 @@ void instDialog::setFlags(QTreeWidgetItem* item)
 
             // If this platform requires installation only on
             // the master, disable and uncheck checkbox for the standby.
-            if (install_only_on_primary_member && master_interface != NULL)
+            if (install_only_on_primary_member && master_interface != nullptr)
             {
                 QString txt = item->text(0);
                 if (master_interface->isChildOf(fw))
@@ -258,12 +262,12 @@ void instDialog::setFlags(QTreeWidgetItem* item)
                     // Standby
                     item->setText(0, QString("%1 (standby)").arg(txt));
                     item->setCheckState(INSTALL_CHECKBOX_COLUMN, Qt::Unchecked);
-                    item->setFlags(0);
+                    item->setFlags(nullptr);
                 }
             }
         }
 
-        if (cluster==NULL)
+        if (cluster==nullptr)
         {
             // we are adding firewall that is not cluster member, it
             // needs "compile" checkbox
@@ -308,6 +312,19 @@ void instDialog::setSuccessState(QTreeWidgetItem *item)
 {
     QBrush b = item->foreground(1);
     b.setColor(Qt::darkGreen);
+    item->setForeground(1,b);
+    item->setForeground(0,b);
+
+    QFont f = item->font(1);
+    f.setBold(true);
+    item->setFont(1,f);
+    item->setFont(0,f);
+}
+
+void instDialog::setWarningState(QTreeWidgetItem *item)
+{
+    QBrush b = item->foreground(1);
+    b.setColor(QColor("orange"));
     item->setForeground(1,b);
     item->setForeground(0,b);
 
@@ -371,6 +388,21 @@ void instDialog::opSuccess(Firewall *fw)
     currentLabel->setText("");
 }
 
+void instDialog::opWarning(Firewall *fw)
+{
+    if (fwbdebug)
+        qDebug() << "instDialog::opWarning fw=" << fw->getName().c_str();
+
+    compile_status[fw] = fwcompiler::BaseCompiler::FWCOMPILER_WARNING;
+    QTreeWidgetItem* itm = opListMapping[(fw)->getId()];
+    if (itm)
+    {
+        itm->setText(1,tr("Success with warning"));
+        setWarningState(itm);
+    }
+    currentLabel->setText("");
+}
+
 void instDialog::opError(Firewall *fw)
 {
     if (fwbdebug)
@@ -390,7 +422,7 @@ void instDialog::opCancelled(Firewall *fw)
 {
     compile_status[fw] = fwcompiler::BaseCompiler::FWCOMPILER_ERROR;
     QTreeWidgetItem* itm = opListMapping[(fw)->getId()];
-    // itm can be NULL, for example when we install to PIX cluster
+    // itm can be nullptr, for example when we install to PIX cluster
     // where we skip one of the members
     if (itm)
     {
@@ -540,7 +572,7 @@ void instDialog::fillCompileSelectList()
     {
         cl = *i;
 
-        QTreeWidgetItem* cluster_item = createTreeItem(NULL, cl);
+        QTreeWidgetItem* cluster_item = createTreeItem(nullptr, cl);
         m_dialog->selectTable->addTopLevelItem(cluster_item);
 
         list<Firewall*> members;
@@ -559,7 +591,7 @@ void instDialog::fillCompileSelectList()
          i!=working_list_of_firewalls.end(); ++i)
     {
         fw = *i;
-        QTreeWidgetItem* fw_item = createTreeItem(NULL, fw);
+        QTreeWidgetItem* fw_item = createTreeItem(nullptr, fw);
         m_dialog->selectTable->addTopLevelItem(fw_item);
     }
 
@@ -674,13 +706,13 @@ void instDialog::cancelClicked()
         proc.kill();
     }
 
-    if (installer != NULL)
+    if (installer != nullptr)
     {
         if (fwbdebug)
             qDebug() << "instDialog::cancelClicked  killing installer";
         installer->terminate();
         delete installer;
-        installer = NULL;
+        installer = nullptr;
     }
 
     QDialog::reject();
@@ -721,7 +753,7 @@ void instDialog::saveLog()
 
     if (!s.endsWith(".txt")) s += ".txt";
     if (fwbdebug)
-        qDebug( "Saving log to file %s", s.toAscii().constData() );
+        qDebug( "Saving log to file %s", s.toLatin1().constData() );
 
     QFile f(s);
     if (f.open( QIODevice::WriteOnly ))
@@ -796,7 +828,7 @@ void instDialog::addToLog(const QString &buf)
 void instDialog::interpretLogLine(const QString &line)
 {
     if (fwbdebug)
-        qDebug("instDialog::interpretLogLine %s", line.toAscii().constData() );
+        qDebug("instDialog::interpretLogLine %s", line.toLatin1().constData() );
 
     QStringList words = line.trimmed().split(" ");
 
@@ -804,7 +836,7 @@ void instDialog::interpretLogLine(const QString &line)
     {
         for (int i=0; i<words.size(); ++i)
             qDebug("instDialog::interpretLogLine words[%d]='%s'",
-                   i, words[i].toAscii().constData());
+                   i, words[i].toLatin1().constData());
     }
 
     if (words.first().indexOf("rule")>=0)
@@ -874,14 +906,14 @@ void instDialog::selectAllFirewalls()
     if (fwbdebug) qDebug("instDialog::selectAllFirewalls");
     setSelectStateAll(INSTALL_CHECKBOX_COLUMN, Qt::Checked);
     setSelectStateAll(COMPILE_CHECKBOX_COLUMN, Qt::Checked);
-    tableItemChanged(NULL, 0);
+    tableItemChanged(nullptr, 0);
 }
 
 void instDialog::deselectAllFirewalls()
 {
     setSelectStateAll(INSTALL_CHECKBOX_COLUMN, Qt::Unchecked);
     setSelectStateAll(COMPILE_CHECKBOX_COLUMN, Qt::Unchecked);
-    tableItemChanged(NULL, 0);
+    tableItemChanged(nullptr, 0);
 }
 
 void instDialog::setSelectStateAll(int column, Qt::CheckState select)
@@ -943,7 +975,7 @@ void instDialog::fillCompileUIList()
     {
         f = (*i);
         item = new InstallFirewallViewItem(
-            NULL,//m_dialog->fwWorkList,
+            nullptr,//m_dialog->fwWorkList,
             QString::fromUtf8(f->getName().c_str()),
             false);
 
@@ -991,7 +1023,7 @@ void instDialog::fillInstallUIList()
     {
         f = (*i);
         item = new InstallFirewallViewItem(
-            NULL,
+            nullptr,
             QString::fromUtf8(f->getName().c_str()),
             false);
 
@@ -1074,14 +1106,14 @@ bool instDialog::getInstOptions(Firewall *fw, bool installing_many_firewalls)
         {
             canceledAll = true;
             delete inst_opt_dlg;
-            inst_opt_dlg = NULL;
+            inst_opt_dlg = nullptr;
             return false;
         }
 
         if (resultCode == QDialog::Rejected)
         {
             delete inst_opt_dlg;
-            inst_opt_dlg = NULL;
+            inst_opt_dlg = nullptr;
             return false;
         }
 
@@ -1124,7 +1156,7 @@ void instDialog::readInstallerOptionsFromFirewallObject(Firewall *fw)
                  << "fw=" << fw
                  << QString( (fw) ? QString::fromUtf8(fw->getName().c_str()) : "");
 
-    FWOptions *fwopt = NULL;
+    FWOptions *fwopt = nullptr;
     if (fw)
     {
         fwopt = fw->getOptionsObject();
@@ -1232,13 +1264,16 @@ void instDialog::readInstallerOptionsFromFirewallObject(Firewall *fw)
         cnf.diff_pgm = Resources::platform_res[platform]->
             getResourceStr("/FWBuilderResources/Target/diff").c_str();
         cnf.diff_pgm = getPathToBinary(
-            cnf.diff_pgm.toAscii().constData()).c_str();
+            cnf.diff_pgm.toLatin1().constData()).c_str();
+
 #ifdef _WIN32
         cnf.diff_pgm = cnf.diff_pgm + ".exe";
 #endif
         cnf.sshArgs = fwopt->getStr("sshArgs").c_str();
         cnf.scpArgs = fwopt->getStr("scpArgs").c_str();
         cnf.useSCPForRouter = fwopt->getBool("use_scp");
+        cnf.useNXOSSession = fwopt->getBool("use_nxos_session");
+
 
         cnf.activationCmd = fwopt->getStr("activationCmd").c_str();
 
@@ -1248,9 +1283,9 @@ void instDialog::readInstallerOptionsFromFirewallObject(Firewall *fw)
             qDebug("host_OS: %s", host_OS.c_str());
             qDebug("user_can_change_install_dir=%d", uccid);
             qDebug("firewall_dir='%s'", fwopt->getStr("firewall_dir").c_str());
-            qDebug("management address: %s", cnf.maddr.toAscii().constData());
-            qDebug("cnf.fwdir='%s'", cnf.fwdir.toAscii().constData());
-            qDebug("activationCmd='%s'", cnf.activationCmd.toAscii().constData());
+            qDebug("management address: %s", cnf.maddr.toLatin1().constData());
+            qDebug("cnf.fwdir='%s'", cnf.fwdir.toLatin1().constData());
+            qDebug("activationCmd='%s'", cnf.activationCmd.toLatin1().constData());
         }
 
     }
@@ -1265,7 +1300,7 @@ void instDialog::readInstallerOptionsFromDialog(Firewall *fw,
 
     QString adm_user;
 
-    FWOptions *fwopt = NULL;
+    FWOptions *fwopt = nullptr;
     if (fw)
     {
         fwopt = cnf.fwobj->getOptionsObject();
@@ -1405,12 +1440,12 @@ void instDialog::closeEvent(QCloseEvent *)
             qDebug() << "instDialog::closeEvent  killing process";
         proc.kill();
     }
-    if (installer != NULL)
+    if (installer != nullptr)
     {
         if (fwbdebug)
             qDebug() << "instDialog::closeEvent  killing installer";
         installer->terminate();
         delete installer;
-        installer = NULL;
+        installer = nullptr;
     }
 }

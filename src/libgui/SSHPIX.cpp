@@ -25,7 +25,6 @@
 
 
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 
@@ -187,7 +186,7 @@ void SSHPIX::PIXbackup()
     if (state==COMMAND_DONE)
     {
         ofstream ofs(backupFile.toLatin1().constData());
-        ofs << cfg.toAscii().constData();
+        ofs << cfg.toLatin1().constData();
         ofs.close();
 
         backup = false;  // backup is done
@@ -251,7 +250,7 @@ void SSHPIX::clearACLs()
         if (newAcls.indexOf(ca)==-1)//newAcls.end())
         {
             if (fwbdebug)
-                qDebug("clear access-list %s",ca.toAscii().constData());
+                qDebug("clear access-list %s",ca.toLatin1().constData());
 
             cmd(proc,QString("clear access-list %1").arg(ca));
 
@@ -318,7 +317,7 @@ void SSHPIX::clearObjectGroups()
         if (newObjectGroups.indexOf(ca)==-1)//==newObjectGroups.end())
         {
             if (fwbdebug)
-                qDebug("clear object-group %s",ca.toAscii().constData());
+                qDebug("clear object-group %s",ca.toLatin1().constData());
 
             cmd(proc, QString("clear object-group %1").arg(ca));
 

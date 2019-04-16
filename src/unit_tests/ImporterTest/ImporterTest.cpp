@@ -23,7 +23,6 @@
 
 #include "ImporterTest.h"
 
-#include "config.h"
 #include "global.h"
 
 #include <fstream>
@@ -131,7 +130,7 @@ void ImporterTest::compareResults(QueueLogger* logger,
 
     QFile rw(obtained_result_file_name);
     rw.open(QFile::WriteOnly);
-    rw.write(result.toAscii());
+    rw.write(result.toLocal8Bit());
     rw.close();
 
     QFile rr(expected_result_file_name);

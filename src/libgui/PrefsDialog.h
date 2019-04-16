@@ -27,11 +27,9 @@
 #ifndef __PREFSDIALOG_H_
 #define __PREFSDIALOG_H_
 
-#include "config.h"
 #include <ui_prefsdialog_q.h>
 
 #include "FWBSettings.h"
-#include "HttpGet.h"
 
 #include <list>
 #include <string>
@@ -52,8 +50,6 @@ class PrefsDialog : public QDialog
 
     std::map<int,QString> colors;
     Ui::prefsDialog_q *m_dialog;
-
-    HttpGet current_version_http_getter;
     
     QFont rulesFont;
     QFont treeFont;
@@ -73,6 +69,7 @@ public slots:
     virtual void findDataDir();
     virtual void findSSH();
     virtual void findSCP();
+    virtual void findDiff();
     virtual void changeRedColor();
     virtual void changeOrangeColor();
     virtual void changeYellowColor();
@@ -80,15 +77,19 @@ public slots:
     virtual void changeBlueColor();
     virtual void changePurpleColor();
     virtual void changeGrayColor();
+    virtual void changeAddColor();
+    virtual void changeEditColor();
+    virtual void changeMoveColor();
+    virtual void changeRemoveColor();
     virtual void changeIconSize25();
     virtual void changeIconSize16();
     virtual void changeShowIcons();
     virtual void changeRulesFont();
     virtual void changeTreeFont();
     virtual void changeCompilerOutputFont();
-    virtual void checkSwUpdates();
-    virtual void checkForUpgrade(const QString&);
     virtual void objTooltipsEnabled(bool);
+
+    void selectTab(const QString &name);
 };
 
 #endif // __PREFSDIALOG_H

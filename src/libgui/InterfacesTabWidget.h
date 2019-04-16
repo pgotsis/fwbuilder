@@ -26,15 +26,15 @@
 #ifndef INTERFACESTABWIDGET_H
 #define INTERFACESTABWIDGET_H
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
 #include "platforms.h"
 
-#include <QtGui/QTabWidget>
-#include <QtGui/QToolButton>
-#include <QtGui/QHBoxLayout>
+#include <QtWidgets/QTabWidget>
+#include <QtWidgets/QToolButton>
+#include <QtWidgets/QHBoxLayout>
+
 #include "fwbuilder/Interface.h"
 #include "fwbuilder/InterfaceData.h"
 #include "fwbuilder/FWObjectDatabase.h"

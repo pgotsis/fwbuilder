@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
@@ -77,7 +76,7 @@ bool FirewallInstallerUnx::packInstallJobsList(Firewall* fw)
     inst_dlg->addToLog(QString("Installation plan:\n"));
 
     Management *mgmt = cnf->fwobj->getManagementObject();
-    assert(mgmt!=NULL);
+    assert(mgmt!=nullptr);
     PolicyInstallScript *pis = mgmt->getPolicyInstallScript();
     if (pis->getCommand()!="")
     {
@@ -93,7 +92,7 @@ bool FirewallInstallerUnx::packInstallJobsList(Firewall* fw)
 
     if (fwbdebug)
         qDebug("FirewallInstaller::packInstallJobsList read manifest from %s",
-               cnf->script.toAscii().constData());
+               cnf->script.toLatin1().constData());
 
 /*
  * Note that if output file is specified in firewall settings dialog,
@@ -105,7 +104,6 @@ bool FirewallInstallerUnx::packInstallJobsList(Firewall* fw)
  * other files are located there as well.
  */
     // compilers always write file names into manifest in Utf8
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("Utf8"));
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("Utf8"));
 
     //key: local_file_name  val: remote_file_name
@@ -123,7 +121,7 @@ bool FirewallInstallerUnx::packInstallJobsList(Firewall* fw)
             job_list.push_back(instJob(COPY_FILE, local_name, remote_name));
             inst_dlg->addToLog(QString("Copy file: %1 --> %2\n")
                                .arg(local_name)
-                               .arg(remote_name).toAscii().constData());
+                               .arg(remote_name).toLatin1().constData());
         }
     } else
     {
@@ -153,7 +151,7 @@ bool FirewallInstallerUnx::packInstallJobsList(Firewall* fw)
                                dest_dir));
         inst_dlg->addToLog(QString("Copy data file: %1 --> %2\n")
                            .arg(fwbfile_base.fileName())
-                           .arg(dest_dir).toAscii().constData());
+                           .arg(dest_dir).toLatin1().constData());
     }
 
     QString cmd = getActivationCmd();

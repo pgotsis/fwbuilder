@@ -24,7 +24,6 @@
 */
 
 
-#include "config.h"
 #include "global.h"
 
 #include "FWBTree.h"
@@ -58,7 +57,7 @@ using namespace libfwbuilder;
 ObjectIconView::ObjectIconView(QWidget* parent, const char*, Qt::WindowFlags) :
     QListWidget(parent)
 {
-    db = NULL;
+    db = nullptr;
 
     //setWindowFlags(f);
 
@@ -83,16 +82,16 @@ bool ObjectIconView::event(QEvent *event)
 
             //viewportToContents(pos.x(),pos.y(),cx,cy);
 
-            FWObject *obj = NULL;
+            FWObject *obj = nullptr;
             QRect cr;
 
             QListWidgetItem *itm = itemAt( QPoint(cx,cy) );
             QModelIndex ind = indexAt( QPoint(cx,cy) );
-            if (itm==NULL) return false;
+            if (itm==nullptr) return false;
 
             int obj_id = itm->data(Qt::UserRole).toInt();
             obj = db->findInIndex(obj_id);
-            if (obj==NULL) return false;
+            if (obj==nullptr) return false;
 
             cr = rectForIndex(ind);
             cr = QRect(
@@ -119,8 +118,8 @@ bool ObjectIconView::event(QEvent *event)
 QDrag* ObjectIconView::dragObject()
 {
     QListWidgetItem *ivi = currentItem();
-    // currentItem returns NULL if the list is empty
-    if (ivi==NULL) return NULL;
+    // currentItem returns nullptr if the list is empty
+    if (ivi==nullptr) return nullptr;
     int obj_id = ivi->data(Qt::UserRole).toInt();
     FWObject *obj = db->findInIndex(obj_id);
     QString icn =
@@ -150,7 +149,7 @@ void ObjectIconView::dragEnterEvent( QDragEnterEvent *ev)
         qDebug("ObjectIconView::dragEnterEvent");
 //    ev->setAccepted( ev->mimeData()->hasFormat(FWObjectDrag::FWB_MIME_TYPE) );
 
-    QWidget *fromWidget = ev->source();
+    QWidget *fromWidget = qobject_cast<QWidget*>(ev->source());
 
     // The source of DnD object must be the same instance of fwbuilder
     if (!fromWidget)
@@ -171,7 +170,7 @@ void ObjectIconView::dragEnterEvent( QDragEnterEvent *ev)
     for (list<FWObject*>::iterator i=dragol.begin();i!=dragol.end(); ++i)
     {
         FWObject *dragobj = *i;
-        assert(dragobj!=NULL);
+        assert(dragobj!=nullptr);
 
         if (FWBTree().isSystem(dragobj))
         {

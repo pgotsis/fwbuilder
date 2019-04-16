@@ -1,4 +1,4 @@
-/* 
+/*
 
                           Firewall Builder
 
@@ -17,7 +17,7 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
- 
+
   To get a copy of the GNU General Public License, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
@@ -97,7 +97,7 @@ void NATCompiler_ipt::PrintRule::initializeMinusNTracker()
     }
     minus_n_tracker_initialized = true;
 }
-            
+
 /*
  * Initialize some internal variables. Need to do this in a separate
  * method because pointer to the compiler object is set by
@@ -121,22 +121,37 @@ string NATCompiler_ipt::PrintRule::_createChain(const string &chain)
 
     if ( ipt_comp->minus_n_commands->count(chain)==0 )
     {
+        string opt_wait;
+
+        if (XMLTools::version_compare(version, "1.4.20")>=0)
+            opt_wait = "-w ";
+        else
+            opt_wait = "";
+
         string ipt_cmd = (ipt_comp->ipv6) ? "$IP6TABLES " : "$IPTABLES ";
-	res << ipt_cmd << "-t nat -N " << chain << endl;
+	res << ipt_cmd << opt_wait << "-t nat -N " << chain << endl;
 	(*(ipt_comp->minus_n_commands))[chain] = true;
     }
     return res.str();
 }
 
 string NATCompiler_ipt::PrintRule::_startRuleLine()
-{            
+{
     NATCompiler_ipt *ipt_comp = dynamic_cast<NATCompiler_ipt*>(compiler);
     string res = (ipt_comp->ipv6) ? "$IP6TABLES " : "$IPTABLES ";
-    return res + string("-t nat -A ");
+
+    string opt_wait;
+
+    if (XMLTools::version_compare(version, "1.4.20")>=0)
+        opt_wait = "-w ";
+    else
+        opt_wait = "";
+
+    return res + opt_wait + string("-t nat -A ");
 }
 
 string NATCompiler_ipt::PrintRule::_endRuleLine()
-{            
+{
     return string("\n");
 }
 
@@ -202,8 +217,8 @@ string NATCompiler_ipt::PrintRule::_printChainDirectionAndInterface(NATRule *rul
 {
     QStringList res;
 
-    RuleElementItfInb *itf_in_re = rule->getItfInb(); assert(itf_in_re!=NULL);
-    RuleElementItfOutb *itf_out_re = rule->getItfOutb(); assert(itf_out_re!=NULL);
+    RuleElementItfInb *itf_in_re = rule->getItfInb(); assert(itf_in_re!=nullptr);
+    RuleElementItfOutb *itf_out_re = rule->getItfOutb(); assert(itf_out_re!=nullptr);
 
     QString iface_in_name = getInterfaceName(itf_in_re);
     QString iface_out_name = getInterfaceName(itf_out_re);
@@ -308,7 +323,7 @@ string NATCompiler_ipt::PrintRule::_printICMP(ICMPService *srv)
     std::ostringstream  ostr;
     if (ICMPService::isA(srv) && srv->getInt("type")!=-1) {
 	ostr << srv->getStr("type");
-	if (srv->getInt("code")!=-1) 
+	if (srv->getInt("code")!=-1)
 	    ostr << "/" << srv->getStr("code") << " ";
     }
     return ostr.str();
@@ -389,7 +404,7 @@ string NATCompiler_ipt::PrintRule::_printSrcService(RuleElementOSrv  *rel)
  * find the object. I'd rather use a cached copy in the compiler
  */
     FWObject *o=rel->front();
-    if (o && FWReference::cast(o)!=NULL)
+    if (o && FWReference::cast(o)!=nullptr)
         o=FWReference::cast(o)->getPointer();
 
     Service *srv= Service::cast(o);
@@ -406,7 +421,7 @@ string NATCompiler_ipt::PrintRule::_printSrcService(RuleElementOSrv  *rel)
 	bool  first=true;
 	for (FWObject::iterator i=rel->begin(); i!=rel->end(); i++) {
 	    FWObject *o= *i;
-	    if (FWReference::cast(o)!=NULL) o=FWReference::cast(o)->getPointer();
+	    if (FWReference::cast(o)!=nullptr) o=FWReference::cast(o)->getPointer();
 
 	    Service *s=Service::cast( o );
 	    assert(s);
@@ -434,7 +449,7 @@ string NATCompiler_ipt::PrintRule::_printDstService(RuleElementOSrv  *rel)
     std::ostringstream  ostr;
 
     FWObject *o=rel->front();
-    if (o && FWReference::cast(o)!=NULL)
+    if (o && FWReference::cast(o)!=nullptr)
         o=FWReference::cast(o)->getPointer();
 
     Service *srv= Service::cast(o);
@@ -456,7 +471,7 @@ string NATCompiler_ipt::PrintRule::_printDstService(RuleElementOSrv  *rel)
 	    string str=_printIP( IPService::cast(srv) );
 	    if (! str.empty() ) ostr << str << " ";
 	}
-	if (CustomService::isA(srv)) 
+	if (CustomService::isA(srv))
         {
 	    ostr << CustomService::cast(srv)->getCodeForPlatform( compiler->myPlatformName() ) << " ";
 	}
@@ -474,7 +489,7 @@ string NATCompiler_ipt::PrintRule::_printDstService(RuleElementOSrv  *rel)
 	for (FWObject::iterator i=rel->begin(); i!=rel->end(); i++)
         {
 	    FWObject *o= *i;
-	    if (FWReference::cast(o)!=NULL) o=FWReference::cast(o)->getPointer();
+	    if (FWReference::cast(o)!=nullptr) o=FWReference::cast(o)->getPointer();
 
 	    Service *s=Service::cast( o );
 	    assert(s);
@@ -528,7 +543,7 @@ string NATCompiler_ipt::PrintRule::_printAddr(Address  *o,
     std::ostringstream  ostr;
 
     MultiAddressRunTime *atrt = MultiAddressRunTime::cast(o);
-    if (atrt!=NULL)
+    if (atrt!=nullptr)
     {
         if (atrt->getSubstitutionTypeName()==AddressTable::TYPENAME)
         {
@@ -545,10 +560,10 @@ string NATCompiler_ipt::PrintRule::_printAddr(Address  *o,
         // to MultiAddressRunTime at this point. If we get some other
         // kind of MultiAddressRunTime object, we do not know what to do
         // with it so we stop.
-        assert(atrt==NULL);
+        assert(atrt==nullptr);
     }
 
-    if (print_range && AddressRange::cast(o)!=NULL)
+    if (print_range && AddressRange::cast(o)!=nullptr)
     {
 	InetAddr a1 = AddressRange::cast(o)->getRangeStart();
 	InetAddr a2 = AddressRange::cast(o)->getRangeEnd();
@@ -556,7 +571,7 @@ string NATCompiler_ipt::PrintRule::_printAddr(Address  *o,
     } else
     {
         Interface *iface = Interface::cast(o);
-        if (iface!=NULL && iface->isDyn() && iface->getBool("use_var_address"))
+        if (iface!=nullptr && iface->isDyn() && iface->getBool("use_var_address"))
         {
             ostr << "$" << ipt_comp->getInterfaceVarName(iface, ipt_comp->ipv6)
                  << " ";
@@ -566,7 +581,7 @@ string NATCompiler_ipt::PrintRule::_printAddr(Address  *o,
         const InetAddr* addr = o->getAddressPtr();
         const InetAddr* mask = o->getNetmaskPtr();
 
-        if (addr==NULL)
+        if (addr==nullptr)
         {
             compiler->warning(
                     string("Empty inet address in object ") +
@@ -577,11 +592,11 @@ string NATCompiler_ipt::PrintRule::_printAddr(Address  *o,
         if (addr->isAny() && mask->isAny())
         {
             ostr << "0/0 ";
-        } else 
+        } else
         {
             ostr << addr->toString();
 
-            if (Interface::cast(o)==NULL &&
+            if (Interface::cast(o)==nullptr &&
                 Address::cast(o)->dimension() > 1 &&
                 !mask->isHostMask())
             {
@@ -601,10 +616,10 @@ string NATCompiler_ipt::PrintRule::_printSingleObjectNegation(
     else return "";
 }
 
-NATCompiler_ipt::PrintRule::PrintRule(const std::string &name) : 
+NATCompiler_ipt::PrintRule::PrintRule(const std::string &name) :
     NATRuleProcessor(name)
 {
-    init = true; 
+    init = true;
     print_once_on_top = true;
     minus_n_tracker_initialized = false;
 }
@@ -612,8 +627,8 @@ NATCompiler_ipt::PrintRule::PrintRule(const std::string &name) :
 bool NATCompiler_ipt::PrintRule::processNext()
 {
     NATCompiler_ipt *ipt_comp = dynamic_cast<NATCompiler_ipt*>(compiler);
-    NATRule *rule=getNext(); 
-    if (rule==NULL) return false;
+    NATRule *rule=getNext();
+    if (rule==nullptr) return false;
 
     FWOptions *ropt = rule->getOptionsObject();
 
@@ -654,7 +669,7 @@ bool NATCompiler_ipt::PrintRule::processNext()
 
     cmdout << _printMultiport(rule);
 
-    if (!osrc->isAny()) 
+    if (!osrc->isAny())
     {
         string physaddress="";
 
@@ -671,10 +686,10 @@ bool NATCompiler_ipt::PrintRule::processNext()
         }
 
         const InetAddr *osrc_addr = osrc->getAddressPtr();
-        if (osrc_addr==NULL || !osrc_addr->isAny())
+        if (osrc_addr==nullptr || !osrc_addr->isAny())
         {
             MultiAddressRunTime *atrt = MultiAddressRunTime::cast(osrc);
-            if (atrt!=NULL && atrt->getSubstitutionTypeName()==AddressTable::TYPENAME &&
+            if (atrt!=nullptr && atrt->getSubstitutionTypeName()==AddressTable::TYPENAME &&
                 ipt_comp->using_ipset)
             {
                 cmdout << _printIpSetMatch(osrc, osrcrel);
@@ -699,7 +714,7 @@ bool NATCompiler_ipt::PrintRule::processNext()
     if (!odst->isAny())
     {
         MultiAddressRunTime *atrt = MultiAddressRunTime::cast(odst);
-        if (atrt!=NULL && atrt->getSubstitutionTypeName()==AddressTable::TYPENAME &&
+        if (atrt!=nullptr && atrt->getSubstitutionTypeName()==AddressTable::TYPENAME &&
             ipt_comp->using_ipset)
         {
             cmdout << _printIpSetMatch(odst, odstrel);
@@ -714,11 +729,11 @@ bool NATCompiler_ipt::PrintRule::processNext()
 
     switch (rule->getRuleType())
     {
-    case NATRule::Masq:  
+    case NATRule::Masq:
         if (ropt->getBool("ipt_nat_random")) cmdout << " --random";
         break;
 
-    case NATRule::SNAT:  
+    case NATRule::SNAT:
 	if (rule->getStr("ipt_target")=="SNAT")
         {
 	    cmdout << "--to-source ";
@@ -751,7 +766,7 @@ bool NATCompiler_ipt::PrintRule::processNext()
  *  "--to-destination :80" (no address in front of the ':') and seems
  *  to do the right thing.
  */
-    case NATRule::DNAT:  
+    case NATRule::DNAT:
 	if (rule->getStr("ipt_target")=="DNAT")
         {
 	    cmdout << "--to-destination ";
@@ -784,7 +799,7 @@ bool NATCompiler_ipt::PrintRule::processNext()
             cmdout << _printAddr(tsrc,true,false);
 	}
         break;
-  
+
     case NATRule::DNetnat:
 	if (rule->getStr("ipt_target")=="NETMAP")
         {
@@ -792,8 +807,8 @@ bool NATCompiler_ipt::PrintRule::processNext()
             cmdout << _printAddr(tdst,true,false);
 	}
         break;
-  
-    case NATRule::Redirect: 
+
+    case NATRule::Redirect:
 	if (rule->getStr("ipt_target")=="REDIRECT")
         {
 	    string ports=_printDNATPorts(tsrv);
@@ -801,7 +816,7 @@ bool NATCompiler_ipt::PrintRule::processNext()
 	}
 	break;
 
-    case NATRule::NATBranch: 
+    case NATRule::NATBranch:
 	break;
 
     default:	break;
@@ -812,7 +827,7 @@ bool NATCompiler_ipt::PrintRule::processNext()
 
 //    cmdout  << endl;
 
-    compiler->output 
+    compiler->output
         << dynamic_cast<OSConfigurator_linux24*>(compiler->osconfigurator)->
         printRunTimeWrappers( rule, cmdout.str(), ipt_comp->ipv6);
 

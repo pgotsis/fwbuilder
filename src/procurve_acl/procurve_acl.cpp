@@ -23,7 +23,6 @@
 
 */
 
-#include "../../config.h"
 
 #include <fstream>
 #include <iostream>
@@ -55,7 +54,7 @@
 #include "fwbuilder/Tools.h"
 #include "fwbuilder/Constants.h"
 
-#include <QApplication>
+#include <QCoreApplication>
 #include <QStringList>
 #include <QTextCodec>
 
@@ -66,7 +65,7 @@ using namespace libfwbuilder;
 using namespace fwcompiler;
 
 
-FWObjectDatabase       *objdb = NULL;
+FWObjectDatabase       *objdb = nullptr;
 
 class UpgradePredicate: public XMLTools::UpgradePredicate
 {
@@ -89,10 +88,9 @@ void usage(const char *name)
 
 int main(int argc, char **argv)
 {   
-    QApplication app(argc, argv, false);
+    QCoreApplication app(argc, argv, false);
 
     // compilers always write file names into manifest in Utf8
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("Utf8"));
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("Utf8"));
     
     QStringList args = app.arguments();
@@ -161,7 +159,8 @@ int main(int argc, char **argv)
         }
 
         driver->compile();
-        int ret = (driver->getStatus() == BaseCompiler::FWCOMPILER_SUCCESS) ? 0 : 1;
+        //int ret = (driver->getStatus() == BaseCompiler::FWCOMPILER_SUCCESS) ? 0 : 1;
+        int ret = driver->getStatus();
 
         delete driver;
         delete objdb;
@@ -176,7 +175,7 @@ int main(int argc, char **argv)
     {
         cerr << s << endl;
         return 1;
-    } catch (std::exception ex)
+    } catch (std::exception &ex)
     {
         cerr << "exception: " << ex.what() << endl;
         return 1;

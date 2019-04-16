@@ -29,8 +29,9 @@
 
 #include <qstring.h>
 #include <qpainter.h>
-#include <QTreeView>
-#include <QTableView>
+
+#include <QtWidgets/QTreeView>
+#include <QtWidgets/QTableView>
 
 #include <vector>
 

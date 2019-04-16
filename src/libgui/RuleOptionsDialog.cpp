@@ -24,7 +24,6 @@
 */
 
 
-#include "config.h"
 #include "definitions.h"
 #include "global.h"
 #include "utils.h"
@@ -82,7 +81,7 @@ RuleOptionsDialog::RuleOptionsDialog(QWidget *parent) :
 
     connectSignalsOfAllWidgetsToSlotChange();
 
-    firewall = NULL;
+    firewall = nullptr;
     init=false;
 }
 
@@ -105,12 +104,13 @@ void RuleOptionsDialog::loadFWObject(FWObject *o)
     PolicyRule *policy_rule = PolicyRule::cast(rule);
 
     int wid=0;
-    if (platform=="iptables") wid=0;
-    if (platform=="ipf")      wid=1;
-    if (platform=="pf")       wid=2;
-    if (platform=="ipfw")     wid=3;
-    if (platform=="pix" || platform=="fwsm")      wid=4;
-    if (platform=="iosacl" || platform=="procurve_acl")   wid=5;
+    if (platform=="iptables") wid=1;
+    if (platform=="ipf")      wid=2;
+    if (platform=="pf")       wid=3;
+    if (platform=="ipfw")     wid=4;
+    if (platform=="pix" || platform=="fwsm")      wid=5;
+    if (platform=="iosacl" || platform=="procurve_acl")   wid=6;
+	if (platform=="junosacl") wid=7;
 
     m_dialog->wStack->widget(wid)->raise();
     m_dialog->wStack->setCurrentWidget(m_dialog->wStack->widget(wid));
@@ -327,7 +327,7 @@ void RuleOptionsDialog::loadFWObject(FWObject *o)
     if (platform=="pix" || platform=="fwsm")
     {
         string vers = "version_" + version;
-        if (Resources::platform_res[platform.toAscii().constData()]->getResourceBool(
+        if (Resources::platform_res[platform.toLatin1().constData()]->getResourceBool(
               "/FWBuilderResources/Target/options/" +
               vers + "/pix_rule_syslog_settings"))
         {
@@ -348,6 +348,11 @@ void RuleOptionsDialog::loadFWObject(FWObject *o)
             m_dialog->pix_log_interval->setEnabled(false);
         }
 
+    }
+
+    if (platform=="junosacl")
+    {
+        data.registerOption(m_dialog->counterLineEdit, ropt, "counter_name");
     }
 
 
@@ -400,7 +405,7 @@ void RuleOptionsDialog::validate(bool *res)
 void RuleOptionsDialog::applyChanges()
 {
 
-    std::auto_ptr<FWCmdChange> cmd( new FWCmdRuleChangeOptions(m_project, obj));
+    std::unique_ptr<FWCmdChange> cmd( new FWCmdRuleChangeOptions(m_project, obj));
     // new_state  is a copy of the rule object
     FWObject* new_state = cmd->getNewState();
     FWOptions* new_rule_options = Rule::cast(new_state)->getOptionsObject();
@@ -419,8 +424,8 @@ void RuleOptionsDialog::applyChanges()
         if (platform=="iptables")
         {
             FWObject *tag_object = m_dialog->iptTagDropArea->getObject();
-            // if tag_object==NULL, setTagObject clears setting in the rule
-            policy_rule->setTagging(tag_object != NULL);
+            // if tag_object==nullptr, setTagObject clears setting in the rule
+            policy_rule->setTagging(tag_object != nullptr);
             policy_rule->setTagObject(tag_object);
 
             policy_rule->setClassification(
@@ -434,8 +439,8 @@ void RuleOptionsDialog::applyChanges()
         if (platform=="pf")
         {
             FWObject *tag_object = m_dialog->pfTagDropArea->getObject();
-            // if tag_object==NULL, setTagObject clears setting in the rule
-            policy_rule->setTagging(tag_object != NULL);
+            // if tag_object==nullptr, setTagObject clears setting in the rule
+            policy_rule->setTagging(tag_object != nullptr);
             policy_rule->setTagObject(tag_object);
 
             policy_rule->setClassification(

@@ -23,8 +23,6 @@
 
 */
 
-#include "config.h"
-#include "fwbuilder/libfwbuilder-config.h"
 
 
 #include <sys/types.h>
@@ -36,8 +34,6 @@
 #include <stdlib.h>
 #include <cstring>
 #include <signal.h>
-
-#include "fwbuilder/memcheck.h"
 
 #include "fwbuilder/FWObject.h"
 #include "fwbuilder/FWObjectDatabase.h"
@@ -188,6 +184,9 @@ void FWObjectDatabase::init_id_dict()
         id_dict[STANDARD_LIB_ID] = "syslib000";
         id_dict[TEMPLATE_LIB_ID] = "syslib100";
         id_dict[DELETED_OBJECTS_ID] = "sysid99";
+        id_dict[DUMMY_ADDRESS_ID] = "dummyaddressid0";
+        id_dict[DUMMY_SERVICE_ID] = "dummyserviceid0";
+        id_dict[DUMMY_INTERFACE_ID] = "dummyinterfaceid0";
 
         for (map<int,string>::iterator i=id_dict.begin(); i!=id_dict.end(); ++i)
             id_dict_reverse[i->second] = i->first;
@@ -306,7 +305,7 @@ const string FWObjectDatabase::getFileDir()
 
 void FWObjectDatabase::load(const string &f,
                             XMLTools::UpgradePredicate *upgrade,
-                            const std::string &template_dir) throw(FWException)
+                            const std::string &template_dir)
 {
     if(f=="") return;
 
@@ -316,7 +315,7 @@ void FWObjectDatabase::load(const string &f,
     
     xmlNodePtr root = xmlDocGetRootElement(doc);
     
-    if(!root || !root->name || strcmp(FROMXMLCAST(root->name),
+    if(!root || !root->name || strcmp(XMLTools::FromXmlCast(root->name),
                                       FWObjectDatabase::TYPENAME)!=SAME)
     {
 	xmlFreeDoc(doc);
@@ -345,7 +344,7 @@ void FWObjectDatabase::load(const string &f,
     busy = false;
 }
 
-void FWObjectDatabase::saveFile(const string &filename) throw(FWException)
+void FWObjectDatabase::saveFile(const string &filename)
 {
 /* need to set flag 'busy' so we ignore read-only status. Some objects
  * modify themselves in toXML() (e.g. Management) so if they belong to
@@ -354,10 +353,10 @@ void FWObjectDatabase::saveFile(const string &filename) throw(FWException)
  */
     busy = true;
 
-    xmlDocPtr doc = xmlNewDoc(TOXMLCAST("1.0"));
-    xmlNodePtr node = xmlNewNode(NULL, STRTOXMLCAST(getName()));
+    xmlDocPtr doc = xmlNewDoc(XMLTools::ToXmlCast("1.0"));
+    xmlNodePtr node = xmlNewNode(nullptr, XMLTools::StrToXmlCast(getName()));
     xmlDocSetRootElement(doc, node);
-    xmlNewNs(node, TOXMLCAST("http://www.fwbuilder.org/1.0/"), NULL);
+    xmlNewNs(node, XMLTools::ToXmlCast("http://www.fwbuilder.org/1.0/"), nullptr);
 
     toXML(xmlDocGetRootElement(doc));
     
@@ -373,7 +372,6 @@ void FWObjectDatabase::saveFile(const string &filename) throw(FWException)
 }
 
 void FWObjectDatabase::saveToBuffer(xmlChar **buffer, int *size)
-    throw(FWException)
 {
 /* need to set flag 'busy' so we ignore read-only status. Some objects
  * modify themselves in toXML() (e.g. Management) so if they belong to a
@@ -382,10 +380,10 @@ void FWObjectDatabase::saveToBuffer(xmlChar **buffer, int *size)
  */
     busy = true;
 
-    xmlDocPtr doc = xmlNewDoc(TOXMLCAST("1.0"));
-    xmlNodePtr node = xmlNewDocNode(doc, NULL, STRTOXMLCAST(getName()), NULL);
+    xmlDocPtr doc = xmlNewDoc(XMLTools::ToXmlCast("1.0"));
+    xmlNodePtr node = xmlNewDocNode(doc, nullptr, XMLTools::StrToXmlCast(getName()), nullptr);
     xmlDocSetRootElement(doc, node);
-    xmlNewNs(node, TOXMLCAST("http://www.fwbuilder.org/1.0/"), NULL);
+    xmlNewNs(node, XMLTools::ToXmlCast("http://www.fwbuilder.org/1.0/"), nullptr);
 
     toXML(xmlDocGetRootElement(doc));
 
@@ -401,53 +399,53 @@ void FWObjectDatabase::saveToBuffer(xmlChar **buffer, int *size)
     busy = false;
 }
 
-void FWObjectDatabase::fromXML(xmlNodePtr root) throw(FWException)
+void FWObjectDatabase::fromXML(xmlNodePtr root)
 {
     FWObject::fromXML(root);
     
-    const char *n = FROMXMLCAST(xmlGetProp(root, TOXMLCAST("lastModified")));
-    if (n!=NULL)
+    const char *n = XMLTools::FromXmlCast(xmlGetProp(root, XMLTools::ToXmlCast("lastModified")));
+    if (n!=nullptr)
     {        
         int i = 0;
         istringstream str(n);
         str >> i;
         lastModified = i;
-        FREEXMLBUFF(n);
+        XMLTools::FreeXmlBuff(n);
         //xmlFree((void*)n);
     }
 }
 
-xmlNodePtr FWObjectDatabase::toXML(xmlNodePtr parent) throw(FWException)
+xmlNodePtr FWObjectDatabase::toXML(xmlNodePtr parent)
 {
     FWObject *o;
 
-    //xmlNewProp(parent, NULL, NULL);
+    //xmlNewProp(parent, nullptr, nullptr);
 
     xmlNewProp(parent, 
-               TOXMLCAST("version") , 
-               TOXMLCAST(FWBUILDER_XML_VERSION));
+               XMLTools::ToXmlCast("version") ,
+               XMLTools::ToXmlCast(FWBUILDER_XML_VERSION));
 
     if (lastModified!=0)
     {
         ostringstream str;
         str << lastModified;
         xmlNewProp(parent, 
-                   TOXMLCAST("lastModified"),
-                   TOXMLCAST(str.str().c_str()));
+                   XMLTools::ToXmlCast("lastModified"),
+                   XMLTools::ToXmlCast(str.str().c_str()));
     }
 
     int rootid = getId();
 
     //NOTUSED xmlAttrPtr pr =
     xmlNewProp(parent,
-               TOXMLCAST("id") , 
-               STRTOXMLCAST(id_dict[rootid]));
+               XMLTools::ToXmlCast("id") ,
+               XMLTools::StrToXmlCast(id_dict[rootid]));
 
-    //xmlAddID(NULL, parent->doc, STRTOXMLCAST(id_dict[rootid]), pr);
+    //xmlAddID(nullptr, parent->doc, XMLTools::StrToXmlCast(id_dict[rootid]), pr);
 
     for(list<FWObject*>::const_iterator j=begin(); j!=end(); ++j) 
     {
-        if ((o=(*j))!=NULL) o->toXML(parent);
+        if ((o=(*j))!=nullptr) o->toXML(parent);
     }
     return parent;
 }
@@ -455,7 +453,7 @@ xmlNodePtr FWObjectDatabase::toXML(xmlNodePtr parent) throw(FWException)
 void  FWObjectDatabase::setDirty(bool f)
 {
     dirty=f;
-    if(!busy && f) lastModified=time(NULL);
+    if(!busy && f) lastModified=time(nullptr);
 }
 
 void FWObjectDatabase::addToIndex(FWObject* o)
@@ -474,15 +472,15 @@ void FWObjectDatabase::removeFromIndex(int id)
 
 FWObject* FWObjectDatabase::checkIndex(int id)
 {
-    if (obj_index.count(id)==0) return NULL;
+    if (obj_index.count(id)==0) return nullptr;
     return obj_index[id];
 }
 
 FWObject* FWObjectDatabase::findInIndex(int id)
 {
-    if (id < 0) return NULL;
+    if (id < 0) return nullptr;
     FWObject *o = checkIndex(id);
-    if (o!=NULL) index_hits++;
+    if (o!=nullptr) index_hits++;
     else
     {
         index_misses++;
@@ -530,7 +528,7 @@ void FWObjectDatabase::_clearReferenceCounters(FWObject *o)
 
 void FWObjectDatabase::_fixReferenceCounters(FWObject *o)
 {
-    if (FWReference::cast(o)!=NULL)
+    if (FWReference::cast(o)!=nullptr)
     {
         FWObject *obj = findInIndex( FWReference::cast(o)->getPointerId() );
         assert(obj);
@@ -592,7 +590,7 @@ void FWObjectDatabase::recursivelyRemoveObjFromTree(FWObject* obj,
 
     for (FWObject::iterator i=obj->begin(); i!=obj->end(); ++i)
     {
-        if (FWReference::cast(*i)!=NULL || RuleSet::cast(*i)!=NULL) continue;
+        if (FWReference::cast(*i)!=nullptr || RuleSet::cast(*i)!=nullptr) continue;
         recursivelyRemoveObjFromTree( *i , true);
     }
 

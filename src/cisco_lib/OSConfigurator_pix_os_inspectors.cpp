@@ -62,7 +62,7 @@ string OSConfigurator_pix_os::_printMPFPolicyMap()
     string version = fw->getStr("version");
     string vers = "version_" + version;
     FWOptions *options = fw->getOptionsObject();
-    assert(options!=NULL);
+    assert(options!=nullptr);
 
     std::list<InspectionClassMap> defaultClassMaps;
     std::list<InspectionClassMap> customClassMaps;
@@ -82,7 +82,7 @@ string OSConfigurator_pix_os::_printMPFPolicyMap()
 
     foreach (QString fixup_xml_element, allowed_fixups)
     {
-        string f = options->getStr(fixup_xml_element.toAscii().constData());
+        string f = options->getStr(fixup_xml_element.toLatin1().constData());
 
         if (!f.empty())
         {
@@ -110,8 +110,7 @@ string OSConfigurator_pix_os::_printMPFPolicyMap()
             {
                 continue;
             }
-
-            InspectionClassMap cm(fixup_name.toAscii().constData(),
+            InspectionClassMap cm(fixup_name.toLatin1().constData(),
                                   status, p1, p2, an, av);
             if (cm.isDefault()) defaultClassMaps.push_back(cm);
             else                customClassMaps.push_back(cm);

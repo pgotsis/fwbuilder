@@ -25,23 +25,13 @@
 */
 
 
-#include "../../config.h"
 #include "global.h"
-#include "VERSION.h"
 #include "../common/commoninit.h"
 
-#ifdef HAVE_GETOPT_H
-#  include <getopt.h>
-#else
-#  ifdef _WIN32
-#    include <getopt.h>
-#  else
-#    include <stdlib.h>
-#  endif
-#endif
+#include <QCommandLineParser>
 
 #include <QString>
-#include <QApplication>
+#include <QtWidgets/QApplication>
 #include <QTimer>
 #include <QPixmapCache>
 #include <QTextCodec>
@@ -90,14 +80,13 @@ using namespace std;
 static QString filename;
 static QString print_output_file_name;
 bool auto_load_from_rcs_head_revision = false;
-FWBApplication *app = NULL;
-FWWindow *mw = NULL;
-FWBSettings *st = NULL;
+FWBApplication *app = nullptr;
+FWWindow *mw = nullptr;
+FWBSettings *st = nullptr;
 int fwbdebug = 0;
 bool safemode = false;
 bool cli_print = false;
 QString cli_print_fwname = "";
-int sig = FWB_SIG;
 
 void usage()
 {
@@ -118,59 +107,84 @@ int main( int argc, char *argv[] )
 
     ssh_wrapper(argc, argv);
 
-    // can not use "-p" for command line printing because
-    // Mac OS X supplies switch "-psnXXXXX" when program is
-    // started via Finder.
-
-    int c;
-    while ((c = getopt (argc , argv , "1hvf:o:P:dxgr")) != EOF )
-	switch (c) {
-	case 'h':
-	    usage();
-	    exit(0);
-
-	case 'f':
-	    filename = optarg;
-	    break;
-
-	case 'o':
-	    print_output_file_name=optarg;
-	    break;
-
-        case 'r':
-            auto_load_from_rcs_head_revision = true;
-            break;
-
-        case 'd':
-            fwbdebug++;
-            break;
-
-	case 'v':
-	    cout << VERSION << endl;
-	    exit(0);
-
-        case 'P':
-            cli_print = true ;
-            cli_print_fwname = optarg;
-            break;
-
-        case '1':
-            force_first_time_run_flag = true;
-            break;
-	}
-
-    if ( (argc-1)==optind)
-        filename = strdup( argv[optind++] );
-
     //QApplication::setDesktopSettingsAware(desktopaware);
  
     Q_INIT_RESOURCE(MainRes);
-
     app = new FWBApplication( argc, argv );
     app->setOrganizationName(QLatin1String("NetCitadel"));
     app->setApplicationName(QLatin1String("Firewall Builder"));
 
+    // can not use "-p" for command line printing because
+    // Mac OS X supplies switch "-psnXXXXX" when program is
+    // started via Finder.
+
+    QCommandLineParser parser;
+    parser.addOption({"h", "help"});
+    parser.addOption({"v", "version"});
+    parser.addOption({"f", "filename"});
+
+    QCommandLineOption fileNameOption("f", "file_name", "file_name");
+    parser.addOption(fileNameOption);
+
+    QCommandLineOption outputFileNameOption("o", "file_name", "output_file_name");
+    parser.addOption(outputFileNameOption);
+
+    QCommandLineOption autoLoadFromRcsHeadRevisionOption("r");
+    parser.addOption(autoLoadFromRcsHeadRevisionOption);
+
+    QCommandLineOption debugOption("d");
+    parser.addOption(debugOption);
+
+    QCommandLineOption objectNameOption("P", "object_name", "object_name");
+    parser.addOption(objectNameOption);
+
+    QCommandLineOption forceFirstRunFlagOption("1");
+    parser.addOption(forceFirstRunFlagOption);
+
+    parser.process(*app);
+
+    if (parser.isSet("h")) {
+        usage();
+        exit(0);
+    }
+
+    if (parser.isSet("v")) {
+        cout << VERSION << "\n";
+        exit(0);
+    }
+
+    if (parser.isSet(fileNameOption)) {
+        filename = parser.value(fileNameOption);
+    }
+
+    if (parser.isSet(objectNameOption)) {
+        cli_print = true;
+        cli_print_fwname = parser.value(objectNameOption);
+    }
+
+    if (parser.isSet(outputFileNameOption)) {
+        print_output_file_name = parser.value(outputFileNameOption);
+    }
+
+    if (parser.isSet(autoLoadFromRcsHeadRevisionOption)) {
+        auto_load_from_rcs_head_revision = true;
+    }
+
+    if (parser.isSet(debugOption)) {
+        fwbdebug++;
+    }
+
+    if (parser.isSet(forceFirstRunFlagOption)) {
+        force_first_time_run_flag = true;
+    }
+
+    auto positionalArguments = parser.positionalArguments();
+    if (positionalArguments.size()) {
+        filename = positionalArguments.at(0);
+    }
+
     if (fwbdebug) qDebug("Initializing ...");
+
 
 /* need to initialize in order to be able to use FWBSettings */
     init(argv);
@@ -280,6 +294,11 @@ int main( int argc, char *argv[] )
     res.clear();
 
     XMLTools::close();
+
+    // We need to call FWWindow::~FWWindow() to remove temporary directory
+    delete mw;
+
+    return 0;
 }
 
 

@@ -43,6 +43,7 @@
 
 #include <assert.h>
 
+#include <QObject>
 #include <QStringList>
 
 
@@ -80,7 +81,7 @@ int RoutingCompiler_openbsd::prolog()
 bool RoutingCompiler_openbsd::addressRangesInDst::processNext()
 {
     RoutingRule *rule;
-    rule=getNext(); if (rule==NULL) return false;
+    rule=getNext(); if (rule==nullptr) return false;
 
     RuleElementRDst *dstrel = rule->getRDst();
     compiler->_expandAddressRanges(rule, dstrel);
@@ -94,7 +95,7 @@ bool RoutingCompiler_openbsd::FindDefaultRoute::processNext()
 {
     RoutingCompiler_openbsd *bsd_comp = dynamic_cast<RoutingCompiler_openbsd*>(compiler);
     RoutingRule *rule;
-    rule=getNext(); if (rule==NULL) return false;
+    rule=getNext(); if (rule==nullptr) return false;
 
     RuleElementRDst *dstrel = rule->getRDst();
     FWObject *ref = dstrel->front();
@@ -112,7 +113,7 @@ bool RoutingCompiler_openbsd::FindDefaultRoute::processNext()
 bool RoutingCompiler_openbsd::optimize3::processNext()
 {
     RoutingCompiler_openbsd *bsd_comp = dynamic_cast<RoutingCompiler_openbsd*>(compiler);
-    RoutingRule *rule = getNext(); if (rule==NULL) return false;
+    RoutingRule *rule = getNext(); if (rule==nullptr) return false;
 
     if (rule->isFallback() || rule->isHidden())
     {
@@ -120,7 +121,7 @@ bool RoutingCompiler_openbsd::optimize3::processNext()
         return true;
     }
 
-    assert (bsd_comp->printRule!=NULL);
+    assert (bsd_comp->printRule!=nullptr);
     
     string thisRule = rule->getLabel() + " " +
         bsd_comp->printRule->RoutingRuleToString(rule, false);
@@ -139,7 +140,7 @@ bool RoutingCompiler_openbsd::optimize3::processNext()
 bool RoutingCompiler_openbsd::eliminateDuplicateRules::processNext()
 {
     RoutingCompiler_openbsd *bsd_comp = dynamic_cast<RoutingCompiler_openbsd*>(compiler);
-    RoutingRule *rule = getNext(); if (rule==NULL) return false;
+    RoutingRule *rule = getNext(); if (rule==nullptr) return false;
 
     if (rule->isFallback() || rule->isHidden())
     {
@@ -147,7 +148,7 @@ bool RoutingCompiler_openbsd::eliminateDuplicateRules::processNext()
         return true;
     }
 
-    assert (bsd_comp->printRule!=NULL);
+    assert (bsd_comp->printRule!=nullptr);
     
     string thisRule = bsd_comp->printRule->RoutingRuleToString(rule, false);
     

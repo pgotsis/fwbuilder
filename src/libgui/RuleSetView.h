@@ -6,6 +6,11 @@
 
   Author:  Illiya Yalovoy <yalovoy@gmail.com>
 
+
+                 Copyright (C) 2013 UNINETT AS
+
+  Author:  Sirius Bakke <sirius.bakke@uninett.no>
+
   $Id$
 
   This program is free software which we release under the GNU General Public
@@ -26,7 +31,8 @@
 #ifndef RULESETVIEW_H
 #define RULESETVIEW_H
 
-#include <QtGui/QTreeView>
+#include <qglobal.h>
+#include <QtWidgets/QTreeView>
 #include <QUndoCommand>
 
 #include "fwbuilder/Rule.h"
@@ -193,6 +199,8 @@ public slots:
     void cutSelectedObject();
     void pasteObject();
 
+    void convertToAny();
+
     void saveCollapsedGroups();
 
     void updateAllColumnsSize();
@@ -311,6 +319,9 @@ private:
     libfwbuilder::FWObject* createInsertTemplate(ProjectPanel* proj_p, int id);
     void setActionState(QAction *action, bool state);
 
+    bool useDummy(libfwbuilder::RuleElement* re) const;
+    void setDummy(libfwbuilder::RuleElement* re);
+    bool isDummy(libfwbuilder::RuleElement* re, int child) const;
 };
 
 class PolicyView : public RuleSetView

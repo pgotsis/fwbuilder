@@ -31,7 +31,6 @@
 //#include <ui_pagesetupdialog_q.h>
 
 #include "RCS.h"
-#include "HttpGet.h"
 #include "printerStream.h"
 #include "ObjectEditor.h"
 #include "instDialog.h"
@@ -64,6 +63,7 @@ class findDialog;
 class FindObjectWidget;
 class FindWhereUsedWidget;
 class CompilerOutputPanel;
+class QTemporaryDir;
 
 namespace Ui {
     class FWBMainWindow_q;
@@ -96,7 +96,6 @@ class FWWindow : public QMainWindow {
     QMdiArea *m_space;
     QMdiSubWindow *previous_subwindow;
     instDialog *instd;
-    HttpGet *current_version_http_getter;
 
     QString noFirewalls;
 
@@ -119,6 +118,8 @@ class FWWindow : public QMainWindow {
     void attachEditorToProjectPanel(ProjectPanel *pp);
 
     QList<QAction*> ruleStaticActions;
+
+    QTemporaryDir *m_temporaryDir;
 
 public:
     QVector <QString> windowsTitles;
@@ -202,6 +203,7 @@ public slots:
     virtual void install(std::set<libfwbuilder::Firewall * > vf);
     virtual void install();
     virtual void inspect();
+    virtual void autoCompile();
 
     virtual void insertRule();
     virtual void addRuleAfterCurrent();
@@ -231,8 +233,6 @@ public slots:
 
     virtual void toolsImportAddressesFromFile();
     virtual void toolsSNMPDiscovery();
-    
-    virtual void checkForUpgrade(const QString&);
 
     virtual void projectWindowClosed();
 
@@ -301,12 +301,12 @@ public slots:
 
     libfwbuilder::FWObject* createObject(const QString &objType,
                                           const QString &objName,
-                                          libfwbuilder::FWObject *copyFrom=NULL);
+                                          libfwbuilder::FWObject *copyFrom=nullptr);
 
     libfwbuilder::FWObject* createObject(libfwbuilder::FWObject *parent,
                                           const QString &objType,
                                           const QString &objName,
-                                          libfwbuilder::FWObject *copyFrom=NULL);
+                                          libfwbuilder::FWObject *copyFrom=nullptr);
 
     void moveObject(libfwbuilder::FWObject *target,
                     libfwbuilder::FWObject *obj);
@@ -369,6 +369,8 @@ public slots:
 
     void addNewObjectMenu(QMenu*);
     void showNewObjectMenu();
+
+    QString getTemporaryDirPath() const;
     
  protected:
 

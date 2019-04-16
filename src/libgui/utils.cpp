@@ -23,7 +23,6 @@
 
 */
 
-#include "../../config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
@@ -92,7 +91,7 @@ QAction* addPopupMenuItem(QObject *res,
     string icn;
     QPixmap pm;
     //int    itmID = -1;
-    QAction *act = NULL;
+    QAction *act = nullptr;
 
     icn = Resources::global_res->getResourceStr(static_cast<const char*>(resourceIconPath.toLatin1()));
     if(icn!="")
@@ -119,7 +118,7 @@ void fillLibraries(QComboBox *libs, libfwbuilder::FWObject *obj, bool rw)
     if ( ! FWObjectDatabase::isA(obj))
     {
         FWObject *libobj = obj->getLibrary();
-        assert(libobj!=NULL);
+        assert(libobj!=nullptr);
         lib = libobj->getName().c_str();
         standardObj = (libobj->getId()==FWObjectDatabase::STANDARD_LIB_ID);
         templateObj = (libobj->getId()==FWObjectDatabase::TEMPLATE_LIB_ID);
@@ -167,7 +166,7 @@ void fillLibraries(QListWidget *libs, libfwbuilder::FWObject *obj, bool rw)
     if ( ! FWObjectDatabase::isA(obj))
     {
         FWObject *libobj = obj->getLibrary();
-        assert(libobj!=NULL);
+        assert(libobj!=nullptr);
         lib = libobj->getName().c_str();
         standardObj = (libobj->getId()==FWObjectDatabase::STANDARD_LIB_ID);
         templateObj = (libobj->getId()==FWObjectDatabase::TEMPLATE_LIB_ID);
@@ -230,14 +229,14 @@ bool validateName(QWidget *parent, FWObject *obj, const QString &newname)
     if (newname.isEmpty())
     {
         // show warning dialog only if app has focus
-        if (QApplication::focusWidget() != NULL)
+        if (QApplication::focusWidget() != nullptr)
         {
             parent->blockSignals(true);
             
             QMessageBox::warning(
                 parent, "Firewall Builder",
                 QObject::tr("Object name should not be blank"),
-                QObject::tr("&Continue"), NULL, NULL, 0, 2 );
+                QObject::tr("&Continue"), nullptr, nullptr, 0, 2 );
                 
             parent->blockSignals(false);
         }
@@ -270,7 +269,7 @@ bool validateName(QWidget *parent, FWObject *obj, const QString &newname)
              */
 
             // show warning dialog only if app has focus
-            if (QApplication::focusWidget() != NULL)
+            if (QApplication::focusWidget() != nullptr)
             {
                 parent->blockSignals(true);
             
@@ -279,7 +278,7 @@ bool validateName(QWidget *parent, FWObject *obj, const QString &newname)
                     QObject::tr("Object with name '%1' already exists, "
                                 "please choose different name.").
                     arg(o1->getName().c_str()),
-                    QObject::tr("&Continue"), NULL, NULL, 0, 2 );
+                    QObject::tr("&Continue"), nullptr, nullptr, 0, 2 );
                 
                 parent->blockSignals(false);
             }
@@ -326,7 +325,7 @@ QString getAddrByName(const QString &name, int af_type)
     list<InetAddr> results;
     try
     {
-        results = DNS::getHostByName(name.toAscii().constData(), af_type);
+        results = DNS::getHostByName(name.toLatin1().constData(), af_type);
     } catch (FWException &e)
     {
         if (fwbdebug) qDebug("utils::getAddrByName: DNS lookup error: %s",
@@ -458,7 +457,7 @@ void LoadPixmap(const QString &path, QPixmap &pm)
     {
         pm.load( path );
         if (pm.width() == 0)
-            qDebug("pixmap load failed: %s", path.toAscii().constData());
+            qDebug("pixmap load failed: %s", path.toLatin1().constData());
         QPixmapCache::insert( path, pm );
     }
 }
@@ -538,7 +537,7 @@ QString _parseTokens(QStringList &args, const QChar closing_quote='\0')
     QString a = _getNextToken(args);
     if (args.size() == 0) return a;
 
-    if (closing_quote != '\0' && a.endsWith(closing_quote))
+    if (closing_quote != QChar('\0') && a.endsWith(closing_quote))
         return a;
 
     if (a.startsWith("\"") || a.startsWith("'"))

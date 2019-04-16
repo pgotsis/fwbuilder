@@ -1,6 +1,5 @@
 
 
-#include "../../config.h"
 
 #include <string>
 #include <assert.h>
@@ -9,7 +8,6 @@
 #include <QString>
 #include <QtDebug>
 
-#include "fwbuilder/libfwbuilder-config.h"
 #include "fwbuilder/Tools.h"
 #include "fwbuilder/Resources.h"
 #include "fwbuilder/Constants.h"
@@ -59,7 +57,7 @@ void init(char * const*)
     userDataDir = string(getenv("HOME"));
 
     char *lname = getenv("LOGNAME");
-    if (lname!=NULL)
+    if (lname!=nullptr)
         user_name = QString(lname);
     else
     {

@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
@@ -74,12 +73,11 @@ bool FirewallInstaller::parseManifestLine(const QString &line,
     // generated IOS and PIX scripts use '!' as a comment which places
     // manifest marker at offset of 1 char from the beginning of the
     // line
-    if (line.indexOf(MANIFEST_MARKER) == -1) return false;
+    if (line.indexOf(QString::fromStdString(fwcompiler::BaseCompiler::manifestMarker())) == -1) return false;
 
     if (fwbdebug)
-        qDebug("Manifest line: '%s'", line.toAscii().constData());
-
-    QString workline = line.split(MANIFEST_MARKER)[1].trimmed();
+        qDebug("Manifest line: '%s'", line.toLatin1().constData());
+    QString workline = line.split(QString::fromStdString(fwcompiler::BaseCompiler::manifestMarker()))[1].trimmed();
     if (workline.startsWith("*"))
     {
         *main_script = true;
@@ -120,9 +118,9 @@ bool FirewallInstaller::parseManifestLine(const QString &line,
 
     if (fwbdebug)
         qDebug() << "local_name:"
-                 << local_file_name->toAscii().constData()
+                 << local_file_name->toLatin1().constData()
                  << "remote_name:"
-                 << remote_file_name->toAscii().constData()
+                 << remote_file_name->toLatin1().constData()
                  << "main_script:" 
                  << *main_script;
 
@@ -412,10 +410,10 @@ void FirewallInstaller::packSCPArgs(const QString &local_name,
 
     try
     {
-        InetAddr addr(AF_INET6, cnf->maddr.toAscii().constData());
+        InetAddr addr(AF_INET6, cnf->maddr.toLatin1().constData());
         if (fwbdebug)
             qDebug("SCP will talk to the firewall using address %s ( %s )",
-                   cnf->maddr.toAscii().constData(),
+                   cnf->maddr.toLatin1().constData(),
                    addr.toString().c_str());
         /*
          * It looks like if cnf->maddr is a host name, then InetAddr
@@ -571,9 +569,9 @@ void FirewallInstaller::copyFile(const QString &local_name, const QString &remot
     packSCPArgs(local_name, remote_name, args);
 
     inst_dlg->addToLog( tr("Copying %1 -> %2:%3\n")
-                        .arg(QString::fromUtf8(local_name.toAscii().constData()))
+                        .arg(QString::fromUtf8(local_name.toLatin1().constData()))
                         .arg(cnf->maddr)
-                        .arg(QString::fromUtf8(remote_name.toAscii().constData())));
+                        .arg(QString::fromUtf8(remote_name.toLatin1().constData())));
 
     if (cnf->verbose) inst_dlg->displayCommand(args);
     qApp->processEvents();
@@ -852,7 +850,7 @@ QString FirewallInstaller::getGeneratedFileName(Firewall *fw)
  
 void FirewallInstaller::terminate()
 {
-    if (session != NULL)
+    if (session != nullptr)
     {
         session->terminate();
     }

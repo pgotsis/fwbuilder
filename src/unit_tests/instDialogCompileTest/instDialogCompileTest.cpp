@@ -79,7 +79,7 @@ QPoint findItemPos(ObjectTreeViewItem *item, ObjectTreeView *tree)
 
 void instDialogCompileTest::closeContextMenu()
 {
-    QMenu *menu = NULL;
+    QMenu *menu = nullptr;
     foreach(QWidget *w, QApplication::allWidgets())
     {
         if (w->objectName() == "objectTreeContextMenu")
@@ -105,7 +105,7 @@ void instDialogCompileTest::openContextMenu(ObjectManipulator *om,
     om->contextMenuRequested(findItemPos(item, tree));
 
     bool found_menu_item = false;
-    QMenu *menu = NULL;
+    QMenu *menu = nullptr;
     foreach(QWidget *w, QApplication::allWidgets())
     {
         if (w->objectName() == "objectTreeContextMenu")
@@ -114,11 +114,11 @@ void instDialogCompileTest::openContextMenu(ObjectManipulator *om,
             break;
         }
     }
-    QVERIFY(menu != NULL);
+    QVERIFY(menu != nullptr);
     foreach (QObject *act, menu->children())
     {
         QAction *action = dynamic_cast<QAction*>(act);
-        if (action == NULL) continue;
+        if (action == nullptr) continue;
         if (action->text() == actionText)
         {
             QVERIFY(action->isEnabled() == true);
@@ -128,7 +128,7 @@ void instDialogCompileTest::openContextMenu(ObjectManipulator *om,
         }
     }
     QVERIFY2(found_menu_item == true,
-             QString("Item %1 not found in the context menu").arg(actionText).toAscii().constData());
+             QString("Item %1 not found in the context menu").arg(actionText).toLatin1().constData());
 }
 
 
@@ -159,9 +159,9 @@ void instDialogCompileTest::testSelectButtonsVisibility()
 
     openContextMenu(om, test1, tree, "Compile");
 
-    instDialog *dlg = NULL;
+    instDialog *dlg = nullptr;
     foreach (QWidget *w, app->allWidgets())
-        if (dynamic_cast<instDialog*>(w) != NULL)
+        if (dynamic_cast<instDialog*>(w) != nullptr)
             dlg = dynamic_cast<instDialog*>(w);
     QFrame *selectFrame = dlg->findChild<QFrame*>("selectAllNoneFrame");
 

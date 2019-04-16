@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "ProjectPanel.h"
@@ -47,6 +46,7 @@
 #include <QUndoStack>
 
 #include <memory>
+#include <sstream>
 
 using namespace std;
 using namespace libfwbuilder;
@@ -56,7 +56,7 @@ AddressRangeDialog::AddressRangeDialog(QWidget *parent):
 {
     m_dialog = new Ui::AddressRangeDialog_q;
     m_dialog->setupUi(this);
-    obj=NULL;
+    obj=nullptr;
 
     connectSignalsOfAllWidgetsToSlotChange();
 }
@@ -70,7 +70,7 @@ void AddressRangeDialog::loadFWObject(FWObject *o)
 {
     obj=o;
     AddressRange *s = dynamic_cast<AddressRange*>(obj);
-    assert(s!=NULL);
+    assert(s!=nullptr);
 
     init=true;
 
@@ -98,23 +98,35 @@ void AddressRangeDialog::validate(bool *res)
 
     if (!validateName(this,obj,m_dialog->obj_name->text())) { *res=false; return; }
 
+#ifndef NDEBUG
     AddressRange *s = dynamic_cast<AddressRange*>(obj);
-    assert(s!=NULL);
+    assert(s!=nullptr);
+#endif
     try
     {
-        InetAddr(m_dialog->rangeStart->text().toLatin1().constData());
-        InetAddr(m_dialog->rangeEnd->text().toLatin1().constData());
+        InetAddr range_start(AF_UNSPEC, m_dialog->rangeStart->text().toLatin1().constData());
+        InetAddr range_end(AF_UNSPEC, m_dialog->rangeEnd->text().toLatin1().constData());
+
+        if (range_start.addressFamily() != range_end.addressFamily()) {
+
+            std::ostringstream s;
+            s << "AddressRange start and end address must be of same IP address family: ";
+            s << "start_address: " << m_dialog->rangeStart->text().toStdString() << ", ";
+            s << "end_address: " << m_dialog->rangeEnd->text().toStdString();
+
+            throw(FWException(s.str()));
+        }
     } catch (FWException &ex)
     {
         *res = false;
         // show warning dialog only if app has focus
-        if (QApplication::focusWidget() != NULL)
+        if (QApplication::focusWidget() != nullptr)
         {
             blockSignals(true);
             QMessageBox::critical(
                 this, "Firewall Builder",
                 QString::fromUtf8(ex.toString().c_str()),
-                tr("&Continue"), 0, 0,
+                tr("&Continue"), nullptr, nullptr,
                 0 );
             blockSignals(false);
         }
@@ -124,11 +136,11 @@ void AddressRangeDialog::validate(bool *res)
 
 void AddressRangeDialog::applyChanges()
 {
-    std::auto_ptr<FWCmdChange> cmd(new FWCmdChange(m_project, obj));
+    std::unique_ptr<FWCmdChange> cmd(new FWCmdChange(m_project, obj));
     FWObject* new_state = cmd->getNewState();
 
     AddressRange *s = dynamic_cast<AddressRange*>(new_state);
-    assert(s!=NULL);
+    assert(s!=nullptr);
 
     string oldname = obj->getName();
     new_state->setName( string(m_dialog->obj_name->text().toUtf8().constData()) );
@@ -136,8 +148,8 @@ void AddressRangeDialog::applyChanges()
 
     try
     {
-        InetAddr addr_start(m_dialog->rangeStart->text().toStdString());
-        InetAddr addr_end(m_dialog->rangeEnd->text().toStdString());
+        InetAddr addr_start(AF_UNSPEC, m_dialog->rangeStart->text().toStdString());
+        InetAddr addr_end(AF_UNSPEC, m_dialog->rangeEnd->text().toStdString());
         if (addr_end < addr_start)
         {
             addr_end = addr_start;

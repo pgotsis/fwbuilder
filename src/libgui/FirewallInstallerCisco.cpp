@@ -23,7 +23,6 @@
 
 */
 
-#include "config.h"
 #include "global.h"
 #include "utils.h"
 #include "utils_no_qt.h"
@@ -32,6 +31,7 @@
 #include "instDialog.h"
 #include "SSHPIX.h"
 #include "SSHIOS.h"
+#include "SSHNXOS.h"
 #include "Configlet.h"
 
 #include "fwbuilder/Resources.h"
@@ -47,7 +47,6 @@
 #include <QMessageBox>
 #include <QtDebug>
 
-
 using namespace std;
 using namespace libfwbuilder;
 
@@ -56,23 +55,23 @@ FirewallInstallerCisco::FirewallInstallerCisco(instDialog *_dlg,
                                                instConf *_cnf, const QString &_p):
     FirewallInstaller(_dlg, _cnf, _p)
 {
-    // string platform = cnf->fwobj->getStr("platform");
-    // if (cnf->fwdir.isEmpty())
-    // {
-    //     if (platform=="iosacl") cnf->fwdir = "nvram:";
-    //     else cnf->fwdir = "flash:";
-    // }
+//     string platform = cnf->fwobj->getStr("platform");
+//     if (cnf->fwdir.isEmpty())
+//     {
+//         if (platform=="nxosacl") cnf->fwdir = "volatile:";
+//         else cnf->fwdir = "flash:";
+//     }
 }
 
 bool FirewallInstallerCisco::packInstallJobsList(Firewall*)
 {
     if (fwbdebug)
         qDebug("FirewallInstallerCisco::packInstallJobList  script=%s",
-               cnf->script.toAscii().constData());
+               cnf->script.toLatin1().constData());
     job_list.clear();
 
     Management *mgmt = cnf->fwobj->getManagementObject();
-    assert(mgmt!=NULL);
+    assert(mgmt!=nullptr);
     PolicyInstallScript *pis = mgmt->getPolicyInstallScript();
     if (pis->getCommand()!="")
     {
@@ -164,11 +163,19 @@ void FirewallInstallerCisco::activatePolicy(const QString&, const QString&)
     packSSHArgs(args);
     if (cnf->verbose) inst_dlg->displayCommand(args);
 
-    SSHCisco *ssh_object = NULL;
+    SSHCisco *ssh_object = nullptr;
     if (cnf->fwobj->getStr("platform")=="pix" ||
         cnf->fwobj->getStr("platform")=="fwsm")
     {
         ssh_object = new SSHPIX(inst_dlg,
+                                cnf->fwobj->getName().c_str(),
+                                args,
+                                cnf->pwd,
+                                cnf->epwd,
+                                list<string>());
+    } else if (cnf->fwobj->getStr("platform")=="nxosacl")
+    {
+        ssh_object = new SSHNXOS(inst_dlg,
                                 cnf->fwobj->getName().c_str(),
                                 args,
                                 cnf->pwd,
@@ -255,6 +262,9 @@ void FirewallInstallerCisco::activatePolicy(const QString&, const QString&)
     activation.setVariable("using_scp",       cnf->useSCPForRouter);
     activation.setVariable("not_using_scp", ! cnf->useSCPForRouter);
 
+    activation.setVariable("using_nxos_session", cnf->useNXOSSession);
+    activation.setVariable("not_using_nxos_session", ! cnf->useNXOSSession);
+
     if ( ! cnf->useSCPForRouter)
     {
         activation.setVariable("fwbuilder_generated_configuration_lines",
@@ -279,6 +289,7 @@ bool FirewallInstallerCisco::readManifest(const QString &script,
     // in case of IOS, it is ":"
     QFileInfo file_base(script);
     QString remote_file = dest_dir + file_base.fileName();
+    qDebug() << "001 REMOTE FILE:" << remote_file;
     QString local_name = script;
     cnf->remote_script = remote_file;
     (*all_files)[local_name] = remote_file;
